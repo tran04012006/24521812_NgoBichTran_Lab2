@@ -5,11 +5,32 @@ import {
   getStateStore,
 } from "./reactive-engine.js";
 
+import { attachRootEvents } from "./event-delegation.js";
+
+const root = document.getElementById("app");
+
+if (!root) {
+  throw new Error("Cannot find #app element");
+}
+
+// Shared action handlers
+const actionHandlers = {};
+
 function TaskApp() {
   const [tasks, setTasks] = useState(["Review PR", "Verify AST"]);
 
   const [filter, setFilter] = useState("ALL");
 
+  // Register action handlers
+  actionHandlers["add-task"] = () => {
+    setTasks((prev) => [...prev, `Task ${prev.length + 1}`]);
+  };
+
+  actionHandlers["toggle-filter"] = () => {
+    setFilter((prev) => (prev === "ALL" ? "ACTIVE" : "ALL"));
+  };
+
+  // Create UI
   const container = document.createElement("div");
 
   const heading = document.createElement("h2");
@@ -18,52 +39,30 @@ function TaskApp() {
   const filterText = document.createElement("p");
   filterText.textContent = `Filter: ${filter}`;
 
+  // Add Task button
   const addButton = document.createElement("button");
   addButton.textContent = "Add Task";
+  addButton.dataset.action = "add-task";
 
-  addButton.addEventListener("click", () => {
-    setTasks((prev) => [...prev, `Task ${prev.length + 1}`]);
-  });
-
+  // Toggle Filter button
   const filterButton = document.createElement("button");
   filterButton.textContent = "Toggle Filter";
-
-  filterButton.addEventListener("click", () => {
-    setFilter((prev) => (prev === "ALL" ? "ACTIVE" : "ALL"));
-  });
+  filterButton.dataset.action = "toggle-filter";
 
   container.append(heading, filterText, addButton, filterButton);
 
   return container;
 }
 
-const root = document.getElementById("app");
-
+// Register rendering callback
 registerRenderer(() => {
   root.replaceChildren(TaskApp());
 
   console.log("State Store:", getStateStore());
 });
 
+// Attach root event listener ONCE
+attachRootEvents(root, actionHandlers);
+
+// First render
 renderApp();
-
-function testStateEngine() {
-  console.log("===== FIRST RENDER =====");
-
-  renderApp();
-
-  console.log("State Store:", getStateStore());
-
-  // Simulate a state update
-  updateState(0, ["Review PR", "Verify AST", "New Task"]);
-
-  updateState(1, "ACTIVE");
-
-  console.log("===== SECOND RENDER =====");
-
-  renderApp();
-
-  console.log("State Store:", getStateStore());
-}
-
-document.getElementById("testBtn").addEventListener("click", testStateEngine);
