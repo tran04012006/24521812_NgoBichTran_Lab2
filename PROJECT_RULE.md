@@ -1,0 +1,3 @@
+- Guide me step-by-step and Generative AI have to explain why I have to do these steps
+- Add images as needed
+- Before guiding, Generative AI should provide me some information for the each knowledge and real-life examples.
