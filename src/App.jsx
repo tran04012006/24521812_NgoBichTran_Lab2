@@ -1,57 +1,97 @@
-import { useState } from "react";
-import { STATUS } from "../src/state-machine";
 import React from "react";
+import ReactDOM from "react-dom/client";
+
+const { useState, useRef, useEffect } = React;
+
+const STATUS = Object.freeze({
+  IDLE: "IDLE",
+  LOADING: "LOADING",
+  SUCCESS: "SUCCESS",
+  ERROR: "ERROR",
+});
 
 function App() {
   const [state, setState] = useState({
     status: STATUS.IDLE,
   });
 
-  const startLoading = () => {
+  const controllerRef = useRef(null);
+  const requestIdRef = useRef(0);
+
+  const loadData = async () => {
+    // Vô hiệu hóa request cũ
+    requestIdRef.current += 1;
+    const currentId = requestIdRef.current;
+
+    // Hủy request trước nếu còn chạy
+    controllerRef.current?.abort();
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
     setState({ status: STATUS.LOADING });
+
+    try {
+      const data = await fetchData(controller.signal);
+
+      // Chỉ request mới nhất được cập nhật state
+      if (currentId !== requestIdRef.current || controller.signal.aborted) {
+        return;
+      }
+
+      setState({
+        status: STATUS.SUCCESS,
+        data: data,
+      });
+    } catch (error) {
+      // Bỏ qua lỗi do hủy request
+      if (currentId !== requestIdRef.current || controller.signal.aborted) {
+        return;
+      }
+
+      setState({
+        status: STATUS.ERROR,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      if (currentId === requestIdRef.current) {
+        controllerRef.current = null;
+      }
+    }
   };
 
-  const loadSuccess = () => {
-    if (state.status !== STATUS.LOADING) return;
-
-    setState({
-      status: STATUS.SUCCESS,
-      data: "Data loaded successfully!",
-    });
-  };
-
-  const loadError = () => {
-    if (state.status !== STATUS.LOADING) return;
-
-    setState({
-      status: STATUS.ERROR,
-      error: "Failed to load data!",
-    });
-  };
-
-  const reset = () => {
-    setState({ status: STATUS.IDLE });
-  };
+  // Hủy request khi component unmount
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+      controllerRef.current?.abort();
+    };
+  }, []);
 
   return (
     <main>
-      <h1>Finite State Machine</h1>
+      <h1>Safe Async Data Handling</h1>
 
       <p>Current State: {state.status}</p>
 
-      {state.status === STATUS.SUCCESS && <p>{state.data}</p>}
+      <button onClick={loadData}>Load Data</button>
 
-      {state.status === STATUS.ERROR && <p>{state.error}</p>}
+      {state.status === STATUS.LOADING && <p>Loading data...</p>}
 
-      <button onClick={startLoading}>Start Loading</button>
+      {state.status === STATUS.SUCCESS && (
+        <div>
+          <h2>Data loaded successfully!</h2>
+          <pre>{JSON.stringify(state.data, null, 2)}</pre>
+        </div>
+      )}
 
-      <button onClick={loadSuccess}>Success</button>
-
-      <button onClick={loadError}>Error</button>
-
-      <button onClick={reset}>Reset</button>
+      {state.status === STATUS.ERROR && (
+        <p role="alert">Error: {state.error}</p>
+      )}
     </main>
   );
 }
 
 export default App;
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
