@@ -22,3 +22,30 @@ function createElement(type, props, ...children) {
   };
 }
 
+function renderToDOM(vnode) {
+  // tao Dom node
+  if (vnode.type === "TEXT_ELEMENT") {
+    return document.createTextNode(vnode.props.nodeValue);
+  }
+
+  const dom = document.createElement(vnode.type);
+
+  //xu li props
+  Object.entries(vnode.props).forEach(([key, value]) => {
+    if (key === "onClick" && typeof value === "function") {
+      dom.addEventListener("click", value);
+    } else if (key === "className") {
+      dom.className = value;
+    } else if (key === "id" || key === "role") {
+      dom.setAttribute(key, value);
+    }
+  });
+
+  // children
+  vnode.children.forEach((child) => {
+    const childDOM = renderToDOM(child);
+    dom.appendChild(childDOM);
+  });
+
+  return dom;
+}
