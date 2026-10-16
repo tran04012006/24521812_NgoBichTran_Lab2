@@ -1,4 +1,4 @@
-function createTextElement(text) {
+export function createTextElement(text) {
   return {
     type: "TEXT_ELEMENT",
     props: {
@@ -8,7 +8,7 @@ function createTextElement(text) {
   };
 }
 
-function createElement(type, props, ...children) {
+export function createElement(type, props, ...children) {
   return {
     type: type,
     props: props || {},
@@ -22,7 +22,7 @@ function createElement(type, props, ...children) {
   };
 }
 
-function renderToDOM(vnode) {
+export function renderToDOM(vnode) {
   // tao Dom node
   if (vnode.type === "TEXT_ELEMENT") {
     return document.createTextNode(vnode.props.nodeValue);
