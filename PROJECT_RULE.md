@@ -1,0 +1,3 @@
+- Guild me step-by-step
+- In each task, tell me what changes I have to do in my current code
+- Explain the knowledge before guiding
