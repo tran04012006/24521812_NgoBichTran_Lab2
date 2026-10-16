@@ -1,0 +1,2 @@
+- AI agent have to guide me step by step, providing me steps with illustration
+- AI agent should provide images when needed
