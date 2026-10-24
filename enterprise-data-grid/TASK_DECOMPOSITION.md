@@ -5,3 +5,6 @@ Task 01 — Data Grid Structure
 │ ├── Render table/caption/thead/tbody/tr/th/td
 │ ├── Write CSS for display and horizontal scrolling
 │ └── Check DOM / TypeScript / table readability
+├── Step 2 — TypeScript Contracts
+│   ├── ColumnDef<T>
+│   └── DataGridProps<T>
