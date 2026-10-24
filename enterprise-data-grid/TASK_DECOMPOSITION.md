@@ -8,3 +8,7 @@ Task 01 — Data Grid Structure
 ├── Step 2 — TypeScript Contracts
 │   ├── ColumnDef<T>
 │   └── DataGridProps<T>
+├── Step 3 — Reusable DataGrid 
+│   ├── Extract DataGrid.tsx
+│   ├── Render columns from the columns prop
+│   └── Test reuse with different data
