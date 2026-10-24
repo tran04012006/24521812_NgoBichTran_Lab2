@@ -12,3 +12,7 @@ Task 01 — Data Grid Structure
 │   ├── Extract DataGrid.tsx
 │   ├── Render columns from the columns prop
 │   └── Test reuse with different data
+└── Step 4 — Accessibility Foundation 
+    ├── Determine the grid interaction model per WAI-ARIA APG
+    ├── Plan focus management and keyboard navigation
+    └── Test keyboard, screen reader, Lighthouse, and axe

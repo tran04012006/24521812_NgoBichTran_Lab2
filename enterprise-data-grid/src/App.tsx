@@ -1,6 +1,7 @@
 
-import "./App.css";
+import { useState } from "react";
 
+import "./App.css";
 import DataGrid from "./components/DataGrid";
 
 import type {
@@ -59,6 +60,13 @@ const employeeColumns: ColumnDef<Employee>[] = [
 ];
 
 function App() {
+  const [selectedEmployee, setSelectedEmployee] =
+    useState<Employee | null>(null);
+
+  const handleRowSelect = (employee: Employee) => {
+    setSelectedEmployee(employee);
+  };
+
   return (
     <main className="app">
       <h1>Employee Management</h1>
@@ -69,7 +77,27 @@ function App() {
         data={employees}
         columns={employeeColumns}
         ariaLabel="Employee List"
+        onRowSelect={handleRowSelect}
       />
+
+      <section
+        className="selection-summary"
+        aria-labelledby="selected-employee-heading"
+      >
+        <h2 id="selected-employee-heading">
+          Selected Employee
+        </h2>
+
+        {selectedEmployee ? (
+          <p>
+            Name: {selectedEmployee.name}
+            {" | "}
+            Department: {selectedEmployee.department}
+          </p>
+        ) : (
+          <p>No employee selected.</p>
+        )}
+      </section>
     </main>
   );
 }
