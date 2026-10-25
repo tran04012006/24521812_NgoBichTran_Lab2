@@ -2,22 +2,38 @@ import type { AudioTrack } from "../types";
 
 interface AudioPlayerProps {
   track: AudioTrack | null;
+  duration: number | null;
+  isPlaying: boolean;
+  playbackError: string | null;
+
+  onPlay: () => Promise<void>;
+  onStop: () => void;
 }
 
-function formatDuration(seconds?: number): string {
-  if (seconds === undefined) {
+function formatDuration(seconds: number | null): string {
+  if (
+    seconds === null ||
+    !Number.isFinite(seconds)
+  ) {
     return "--:--";
   }
 
   const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
+  const remaining = Math.floor(seconds % 60);
 
-  return `${minutes}:${remainingSeconds
-    .toString()
-    .padStart(2, "0")}`;
+  return `${minutes}:${String(remaining).padStart(2, "0")}`;
 }
 
-function AudioPlayer({ track }: AudioPlayerProps) {
+function AudioPlayer({
+  track,
+  duration,
+  isPlaying,
+  playbackError,
+  onPlay,
+  onStop,
+}: AudioPlayerProps) {
+  const hasAudio = track !== null;
+
   return (
     <section
       className="panel audio-player"
@@ -25,7 +41,9 @@ function AudioPlayer({ track }: AudioPlayerProps) {
     >
       <div className="panel-heading">
         <div>
-          <p className="section-eyebrow">PLAYBACK</p>
+          <p className="section-eyebrow">
+            AUDIO PLAYBACK
+          </p>
 
           <h2 id="audio-player-heading">
             Audio Player
@@ -33,7 +51,7 @@ function AudioPlayer({ track }: AudioPlayerProps) {
         </div>
 
         <span className="status-pill">
-          Not playing
+          {isPlaying ? "Playing" : "Stopped"}
         </span>
       </div>
 
@@ -42,22 +60,22 @@ function AudioPlayer({ track }: AudioPlayerProps) {
           className="track-artwork"
           aria-hidden="true"
         >
-          <span>♫</span>
+          ♫
         </div>
 
         <div className="track-information">
           <p className="track-label">
-            SELECTED TRACK
+            DECODED TRACK
           </p>
 
           <h3>
-            {track?.title ?? "No track selected"}
+            {track?.title ?? "No track loaded"}
           </h3>
 
           <p>
-            {track
-              ? "Ready for future audio integration"
-              : "Choose a track to get started"}
+            {hasAudio
+              ? "Audio is ready for playback."
+              : "Add a track and wait for decoding."}
           </p>
         </div>
       </div>
@@ -70,33 +88,45 @@ function AudioPlayer({ track }: AudioPlayerProps) {
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={0}
-          aria-valuetext="No playback in progress"
+          aria-valuetext="Playback position tracking not implemented"
         >
           <div className="progress-fill" />
         </div>
 
         <div className="time-labels">
-          <span>0:00</span>
-
-          <span>
-            {formatDuration(track?.duration)}
-          </span>
+          <span>--:--</span>
+          <span>{formatDuration(duration)}</span>
         </div>
       </div>
 
       <div className="player-controls">
-        <button type="button" disabled>
-          Play
+        <button
+          type="button"
+          onClick={() => void onPlay()}
+          disabled={!hasAudio}
+        >
+          {isPlaying ? "Restart" : "Play"}
         </button>
 
-        <button type="button" disabled>
+        <button
+          type="button"
+          onClick={onStop}
+          disabled={!isPlaying}
+        >
           Stop
         </button>
       </div>
 
+      {playbackError && (
+        <p className="playback-error" role="alert">
+          {playbackError}
+        </p>
+      )}
+
       <p className="helper-text">
-        Playback controls will be enabled after
-        the audio engine is implemented.
+        A new AudioBufferSourceNode is created
+        for every playback. Playback seeking and
+        progress tracking are not implemented yet.
       </p>
     </section>
   );

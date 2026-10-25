@@ -11,9 +11,6 @@ export type TaskStatus =
   | "failed"
   | "cancelled";
 
-/**
- * Internal task representation.
- */
 export interface AudioTask {
   id: string;
   track: AudioTrack;
@@ -25,18 +22,12 @@ export interface AudioTask {
   reject: (reason?: unknown) => void;
 }
 
-/**
- * Public information about a task.
- */
 export interface AudioTaskInfo {
   readonly id: string;
   readonly track: Readonly<AudioTrack>;
   readonly status: TaskStatus;
 }
 
-/**
- * Public state of the entire queue.
- */
 export interface QueueSnapshot {
   readonly status: QueueStatus;
 
@@ -50,21 +41,12 @@ export interface QueueSnapshot {
     readonly AudioTaskInfo[];
 }
 
-/**
- * Called when the queue state changes.
- */
 export type QueueListener = (
   snapshot: QueueSnapshot
 ) => void;
 
-/**
- * Function used to unsubscribe.
- */
 export type QueueUnsubscribe = () => void;
 
-/**
- * Public contract for the FIFO queue.
- */
 export interface AudioTaskQueueInterface {
   enqueue(
     track: AudioTrack
@@ -77,4 +59,10 @@ export interface AudioTaskQueueInterface {
   subscribe(
     listener: QueueListener
   ): QueueUnsubscribe;
+
+  /**
+   * Cancel unfinished tasks and wait
+   * for active processing to settle.
+   */
+  dispose(): Promise<void>;
 }

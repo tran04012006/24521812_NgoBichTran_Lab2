@@ -4,8 +4,12 @@ import AudioVisualizer from "./components/AudioVisualizer";
 
 import QueueControls from "./components/QueueControls";
 import QueueTestPanel from "./components/QueueTestPanel";
+
 import CancellationTestPanel from
   "./components/CancellationTestPanel";
+
+import AudioDecodeTestPanel from
+  "./components/AudioDecodeTestPanel";
 
 import { useAudioQueue } from "./hooks/useAudioQueue";
 
@@ -18,12 +22,13 @@ function App() {
     snapshot,
     enqueue,
     cancel,
-  } = useAudioQueue();
 
-  const selectedTrack =
-    snapshot.activeTask?.track ??
-    snapshot.pendingTasks[0]?.track ??
-    null;
+    loadedAudio,
+    isPlaying,
+    playbackError,
+    play,
+    stop,
+  } = useAudioQueue();
 
   return (
     <main className="app">
@@ -37,9 +42,8 @@ function App() {
         </h1>
 
         <p>
-          An audio player powered by FIFO queue
-          management, Web Audio API, and real-time
-          frequency analysis.
+          FIFO queue management, real audio decoding,
+          and audio playback using Web Audio API.
         </p>
       </header>
 
@@ -49,7 +53,14 @@ function App() {
       />
 
       <div className="dashboard">
-        <AudioPlayer track={selectedTrack} />
+        <AudioPlayer
+          track={loadedAudio?.track ?? null}
+          duration={loadedAudio?.buffer.duration ?? null}
+          isPlaying={isPlaying}
+          playbackError={playbackError}
+          onPlay={play}
+          onStop={stop}
+        />
 
         <TrackQueue
           snapshot={snapshot}
@@ -57,6 +68,10 @@ function App() {
         />
 
         <AudioVisualizer />
+      </div>
+
+      <div className="audio-decode-test-section">
+        <AudioDecodeTestPanel />
       </div>
 
       <div className="queue-test-section">

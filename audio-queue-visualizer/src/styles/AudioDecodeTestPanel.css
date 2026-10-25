@@ -1,0 +1,69 @@
+.audio-decode-test-section {
+  margin-top: 24px;
+}
+
+.audio-decode-test .helper-text {
+  margin: 0 0 20px;
+}
+
+.audio-decode-test > p {
+  color: #cbd5e1;
+  overflow-wrap: anywhere;
+}
+
+.decode-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  margin-top: 24px;
+}
+
+.decode-actions button {
+  min-height: 44px;
+  padding: 10px 20px;
+
+  border: 1px solid #38bdf8;
+  border-radius: 10px;
+
+  background-color: #164e63;
+  color: #cffafe;
+
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.decode-actions button:hover:not(:disabled) {
+  background-color: #155e75;
+}
+
+.decode-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.decode-result {
+  margin-top: 24px;
+  padding: 20px;
+
+  background-color: #0b1120;
+  border: 1px solid #334155;
+  border-radius: 12px;
+
+  color: #cbd5e1;
+  line-height: 1.7;
+}
+
+.decode-result p {
+  margin: 8px 0;
+}
+
+@media (max-width: 480px) {
+  .decode-actions {
+    flex-direction: column;
+  }
+
+  .decode-actions button {
+    width: 100%;
+  }
+}

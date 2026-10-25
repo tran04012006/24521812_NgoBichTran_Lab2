@@ -1,22 +1,24 @@
 import type { AudioTrack } from "../types";
 
 /**
- * Mock tracks used during UI development.
+ * Real audio tracks for FIFO integration.
  *
- * URLs are placeholders and are not loaded yet.
+ * Three track records temporarily reference
+ * the same MP3 file.
+ *
+ * Replace the URLs when separate MP3 files
+ * become available.
  */
 export const mockTracks: AudioTrack[] = [
   {
     id: "track-1",
     title: "Song A",
     url: "/audio/song-a.mp3",
-    duration: 180,
   },
   {
     id: "track-2",
     title: "Song B",
     url: "/audio/song-b.mp3",
-    duration: 210,
   },
   {
     id: "track-3",

@@ -1,0 +1,44 @@
+/* AUDIO PLAYBACK STATUS */
+
+.audio-player .status-pill {
+  color: #e2e8f0;
+}
+
+/* PLAYBACK ERRORS */
+
+.playback-error {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+
+  background-color: #7f1d1d;
+  color: #fecaca;
+
+  border: 1px solid #ef4444;
+  border-radius: 10px;
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* PLAYER BUTTON STATES */
+
+.audio-player .player-controls button {
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.audio-player .player-controls button:hover:not(:disabled) {
+  background-color: #7dd3fc;
+}
+
+.audio-player .player-controls button:focus-visible {
+  outline: 3px solid #67e8f9;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audio-player .player-controls button {
+    transition: none;
+  }
+}

@@ -10,10 +10,14 @@ interface QueueControlsProps {
   ) => Promise<AudioBuffer>;
 }
 
-type RequestResult = {
+interface RequestResult {
   id: number;
+  trackTitle: string;
+
+  status: "completed" | "failed" | "cancelled";
+
   message: string;
-};
+}
 
 function QueueControls({
   tracks,
@@ -22,54 +26,78 @@ function QueueControls({
   const [selectedTrackId, setSelectedTrackId] =
     useState(tracks[0]?.id ?? "");
 
-  const [results, setResults] = useState<RequestResult[]>(
-    []
-  );
+  const [results, setResults] = useState<
+    RequestResult[]
+  >([]);
 
   const nextResultId = useRef(1);
 
-  const addResult = (message: string) => {
+  const addResult = (
+    trackTitle: string,
+    status: RequestResult["status"],
+    message: string
+  ) => {
     const result: RequestResult = {
       id: nextResultId.current++,
+      trackTitle,
+      status,
       message,
     };
 
     setResults((previous) => [
       result,
       ...previous,
-    ].slice(0, 8));
+    ].slice(0, 10));
   };
 
   const enqueueTrack = (track: AudioTrack) => {
-    // Do not await here: queue requests must be
-    // submitted without waiting for earlier ones.
+    /*
+     * Attach both fulfillment and rejection
+     * handlers immediately.
+     */
     void onEnqueue(track).then(
-      () => {
-        addResult(`${track.title}: Completed`);
+      (buffer) => {
+        addResult(
+          track.title,
+          "completed",
+          `Decoded successfully | ` +
+          `Duration: ${buffer.duration.toFixed(2)}s | ` +
+          `Sample rate: ${buffer.sampleRate}Hz | ` +
+          `Channels: ${buffer.numberOfChannels}`
+        );
       },
+
       (error: unknown) => {
+        const isCancelled =
+          error instanceof Error &&
+          error.name === "AbortError";
+
         const message =
           error instanceof Error
-            ? error.name
+            ? error.message
             : String(error);
 
         addResult(
-          `${track.title}: ${message}`
+          track.title,
+          isCancelled ? "cancelled" : "failed",
+          isCancelled
+            ? "Audio loading cancelled."
+            : `Error: ${message}`
         );
       }
     );
   };
 
   const handleAddTrack = () => {
-    const track = tracks.find(
-      (item) => item.id === selectedTrackId
+    const selectedTrack = tracks.find(
+      (track) => track.id === selectedTrackId
     );
 
-    if (!track) {
+    if (!selectedTrack) {
       return;
     }
 
-    enqueueTrack(track);
+    enqueueTrack(selectedTrack);
   };
 
   const handleAddAll = () => {
@@ -86,7 +114,7 @@ function QueueControls({
       <div className="panel-heading">
         <div>
           <p className="section-eyebrow">
-            LIVE QUEUE CONTROLS
+            REAL AUDIO PROCESSING
           </p>
 
           <h2 id="queue-controls-heading">
@@ -95,13 +123,13 @@ function QueueControls({
         </div>
 
         <span className="status-pill">
-          Mock Processor
+          Web Audio API
         </span>
       </div>
 
       <p className="helper-text">
-        Add one or more audio tasks to the real
-        FIFO Queue Engine. Processing is simulated.
+        Audio tasks are downloaded and decoded
+        sequentially by the FIFO Queue Engine.
       </p>
 
       <div className="queue-controls-form">
@@ -147,15 +175,26 @@ function QueueControls({
       </div>
 
       <div className="queue-request-results">
-        <h3>Request Results</h3>
+        <h3>Audio Processing Results</h3>
 
         {results.length === 0 ? (
-          <p>No completed requests yet.</p>
+          <p>No processed audio requests yet.</p>
         ) : (
-          <ul aria-label="Recent request results">
+          <ul aria-label="Recent audio processing results">
             {results.map((result) => (
               <li key={result.id}>
-                {result.message}
+                <strong>{result.trackTitle}</strong>
+                {" — "}
+
+                <span
+                  className={
+                    `request-status request-status--${result.status}`
+                  }
+                >
+                  {result.status}
+                </span>
+
+                <p>{result.message}</p>
               </li>
             ))}
           </ul>

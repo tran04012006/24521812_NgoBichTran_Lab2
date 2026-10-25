@@ -62,3 +62,36 @@ TASK 2 — FIFO QUEUE ENGINE
     ├── Promise Settlement
     ├── Failure Recovery
     └── Cancellation Tests
+TASK 3 — AUDIO LOADING & DECODING
+│
+├── Step 1 — Web Audio API Foundation
+│   ├── AudioContext
+│   ├── fetch() audio file
+│   ├── decodeAudioData()
+│   ├── AbortSignal
+│   └── Test audio decoding
+│
+├── Step 2 — Real Audio Processor
+│   ├── Connect AudioEngine to FIFO Queue
+│   ├── Replace Mock Processor
+│   ├── Handle network errors
+│   └── Handle decoding errors
+│
+├── Step 3 — AudioContext Lifecycle
+│   ├── Manage shared AudioContext
+│   ├── Initialize on demand
+│   ├── Prevent resource leaks
+│   └── Close AudioContext safely
+│
+├── Step 4 — Audio Playback Integration
+│   ├── AudioBufferSourceNode
+│   ├── Play / Stop
+│   ├── Playback State
+│   └── Audio Node Cleanup
+│
+└── Step 5 — Testing & Verification
+    ├── Real audio loading
+    ├── Invalid audio files
+    ├── Cancellation
+    ├── Cleanup
+    └── Build & integration tests

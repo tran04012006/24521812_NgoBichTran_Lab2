@@ -10,6 +10,10 @@ import "./styles/CancellationTestPanel.css";
 
 import "./styles/QueueControls.css";
 import "./styles/TrackQueueLive.css";
+import "./styles/QueueResult.css";
+
+import "./styles/AudioDecodeTestPanel.css";
+import "./styles/AudioPlayback.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
