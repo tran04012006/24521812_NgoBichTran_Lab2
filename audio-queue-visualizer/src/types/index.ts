@@ -6,7 +6,9 @@ export type {
   AudioTask,
   AudioTaskInfo,
   AudioTaskQueueInterface,
+  QueueListener,
   QueueSnapshot,
   QueueStatus,
+  QueueUnsubscribe,
   TaskStatus,
 } from "./queue.types";

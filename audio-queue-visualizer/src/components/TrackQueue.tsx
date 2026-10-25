@@ -5,8 +5,8 @@ import type {
 } from "../types";
 
 interface TrackQueueProps {
-  tasks: AudioTaskInfo[];
   snapshot: QueueSnapshot;
+  onCancel: (taskId: string) => void;
 }
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -17,17 +17,70 @@ const statusLabels: Record<TaskStatus, string> = {
   cancelled: "Cancelled",
 };
 
+interface TaskItemProps {
+  task: AudioTaskInfo;
+  onCancel?: (taskId: string) => void;
+}
+
+function TaskItem({
+  task,
+  onCancel,
+}: TaskItemProps) {
+  const canCancel =
+    task.status === "pending" ||
+    task.status === "processing";
+
+  return (
+    <li className="track-item">
+      <div className="track-item-info">
+        <span className="track-item-title">
+          {task.track.title}
+        </span>
+
+        <span className="track-item-id">
+          {task.id}
+        </span>
+
+        <span
+          className={
+            `task-status task-status--${task.status}`
+          }
+        >
+          {statusLabels[task.status]}
+        </span>
+      </div>
+
+      {canCancel && onCancel && (
+        <button
+          type="button"
+          className="queue-cancel-button"
+          onClick={() => onCancel(task.id)}
+          aria-label={
+            `Cancel ${task.track.title}, ${task.id}`
+          }
+        >
+          Cancel
+        </button>
+      )}
+    </li>
+  );
+}
+
 function TrackQueue({
-  tasks,
   snapshot,
+  onCancel,
 }: TrackQueueProps) {
-  const completedCount = tasks.filter(
+  const completedCount = snapshot.history.filter(
     (task) => task.status === "completed"
   ).length;
 
-  const pendingCount = tasks.filter(
-    (task) => task.status === "pending"
-  ).length;
+  const pendingCount = snapshot.pendingTasks.length;
+
+  const activeTask = snapshot.activeTask;
+
+  const activeTasks = activeTask
+    ? [activeTask]
+    : [];
 
   return (
     <section
@@ -37,7 +90,7 @@ function TrackQueue({
       <div className="panel-heading">
         <div>
           <p className="section-eyebrow">
-            TASK MANAGEMENT
+            LIVE TASK MANAGEMENT
           </p>
 
           <h2 id="track-queue-heading">
@@ -52,7 +105,15 @@ function TrackQueue({
 
       <div className="queue-summary">
         <div>
-          <strong>{tasks.length}</strong>
+          <strong>
+            {pendingCount +
+              activeTasks.length +
+              snapshot.history.filter(
+                (task) =>
+                  task.id !== activeTask?.id
+              ).length}
+          </strong>
+
           <span>Total</span>
         </div>
 
@@ -67,40 +128,69 @@ function TrackQueue({
         </div>
       </div>
 
-      {tasks.length === 0 ? (
-        <div className="queue-empty">
-          No audio tasks available.
-        </div>
-      ) : (
-        <ol className="track-list">
-          {tasks.map((task) => (
-            <li
-              key={task.id}
-              className="track-item"
-            >
-              <div className="track-item-info">
-                <span className="track-item-title">
-                  {task.track.title}
-                </span>
+      <div className="queue-group">
+        <h3>Active Task</h3>
 
-                <span className="track-item-id">
-                  {task.id}
-                </span>
-              </div>
+        {activeTask ? (
+          <ol className="track-list">
+            <TaskItem
+              task={activeTask}
+              onCancel={onCancel}
+            />
+          </ol>
+        ) : (
+          <p className="queue-empty">
+            No active task.
+          </p>
+        )}
+      </div>
 
-              <span
-                className={`task-status task-status--${task.status}`}
-              >
-                {statusLabels[task.status]}
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
+      <div className="queue-group">
+        <h3>
+          Pending Tasks ({pendingCount})
+        </h3>
+
+        {pendingCount > 0 ? (
+          <ol className="track-list">
+            {snapshot.pendingTasks.map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                onCancel={onCancel}
+              />
+            ))}
+          </ol>
+        ) : (
+          <p className="queue-empty">
+            No pending tasks.
+          </p>
+        )}
+      </div>
+
+      <div className="queue-group">
+        <h3>
+          Task History ({snapshot.history.length})
+        </h3>
+
+        {snapshot.history.length > 0 ? (
+          <ol className="track-list">
+            {snapshot.history.map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+              />
+            ))}
+          </ol>
+        ) : (
+          <p className="queue-empty">
+            No completed tasks yet.
+          </p>
+        )}
+      </div>
 
       <p className="helper-text">
-        Demo queue states only. FIFO processing
-        will be implemented in Task 2.
+        Live FIFO queue state using a simulated
+        audio processor.
       </p>
     </section>
   );

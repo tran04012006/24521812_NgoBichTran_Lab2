@@ -5,12 +5,6 @@ import type {
 
 import { mockTracks } from "./mockTracks";
 
-/**
- * Mock data for visual UI development.
- *
- * This is not a real running FIFO queue.
- */
-
 export const mockTasks: AudioTaskInfo[] =
   mockTracks.map((track, index) => {
     let status: AudioTaskInfo["status"] = "pending";
@@ -35,5 +29,12 @@ export const mockQueueSnapshot: QueueSnapshot = {
 
   pendingTasks: mockTasks.filter(
     (task) => task.status === "pending"
+  ),
+
+  history: mockTasks.filter(
+    (task) =>
+      task.status === "completed" ||
+      task.status === "failed" ||
+      task.status === "cancelled"
   ),
 };

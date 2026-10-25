@@ -1,0 +1,63 @@
+.queue-test-section {
+  margin-top: 24px;
+}
+
+.queue-test-section .helper-text {
+  margin: 0 0 18px;
+}
+
+.queue-test-output {
+  margin: 20px 0 0;
+  padding: 20px;
+
+  min-height: 180px;
+  max-height: 420px;
+
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  background-color: #0b1120;
+  border: 1px solid #334155;
+  border-radius: 12px;
+
+  color: #a5f3fc;
+  font-family: Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.queue-test-section button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.queue-test-summary {
+  margin-top: 20px;
+  padding: 20px;
+
+  background-color: #243247;
+  border-radius: 12px;
+
+  color: #e2e8f0;
+}
+
+.queue-test-summary h3 {
+  margin: 0 0 16px;
+
+  color: #67e8f9;
+  font-size: 18px;
+}
+
+.queue-test-summary p {
+  margin: 8px 0;
+}
+
+.queue-test-summary ul {
+  margin: 16px 0 0;
+  padding-left: 22px;
+}
+
+.queue-test-summary li {
+  margin-bottom: 8px;
+}

@@ -5,6 +5,12 @@ import App from "./App";
 
 import "./styles/global.css";
 
+import "./styles/QueueTestPanel.css";
+import "./styles/CancellationTestPanel.css";
+
+import "./styles/QueueControls.css";
+import "./styles/TrackQueueLive.css";
+
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(

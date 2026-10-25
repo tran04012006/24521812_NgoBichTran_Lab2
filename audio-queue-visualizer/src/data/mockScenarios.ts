@@ -22,10 +22,6 @@ export interface DemoScenario {
   snapshot: QueueSnapshot;
 }
 
-/**
- * Create typed mock tasks.
- * No real queue processing occurs here.
- */
 function createTasks(
   statuses: TaskStatus[]
 ): AudioTaskInfo[] {
@@ -46,12 +42,6 @@ function createTasks(
   });
 }
 
-/**
- * Derive the queue snapshot from task data.
- *
- * Assumption for this UI:
- * only one task can be processing at a time.
- */
 function createSnapshot(
   tasks: AudioTaskInfo[]
 ): QueueSnapshot {
@@ -61,7 +51,7 @@ function createSnapshot(
 
   if (activeTasks.length > 1) {
     throw new Error(
-      "Mock queue cannot contain multiple active tasks."
+      "Mock queue cannot have multiple active tasks."
     );
   }
 
@@ -74,6 +64,13 @@ function createSnapshot(
 
     pendingTasks: tasks.filter(
       (task) => task.status === "pending"
+    ),
+
+    history: tasks.filter(
+      (task) =>
+        task.status === "completed" ||
+        task.status === "failed" ||
+        task.status === "cancelled"
     ),
   };
 }
@@ -120,23 +117,24 @@ export const demoScenarios: DemoScenario[] = [
   createScenario(
     "completed",
     "Completed",
-    "All tasks have completed successfully.",
+    "All tasks completed successfully.",
     ["completed", "completed", "completed"]
   ),
 
   createScenario(
     "failed",
     "Failed",
-    "A task has failed while other tasks are completed.",
+    "One task failed during processing.",
     ["completed", "failed", "completed"]
   ),
 
   createScenario(
     "cancelled",
     "Cancelled",
-    "A task has been cancelled.",
+    "One task was cancelled.",
     ["completed", "cancelled", "pending"]
   ),
 ];
 
-export const defaultScenarioId: ScenarioId = "processing";
+export const defaultScenarioId: ScenarioId =
+  "processing";

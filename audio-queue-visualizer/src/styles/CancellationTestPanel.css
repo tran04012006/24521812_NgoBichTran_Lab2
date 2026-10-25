@@ -1,0 +1,72 @@
+.cancellation-test-section {
+  margin-top: 24px;
+}
+
+.cancellation-test-section .helper-text {
+  margin: 0 0 20px;
+}
+
+.cancellation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cancellation-actions button {
+  min-height: 44px;
+  padding: 10px 16px;
+
+  border: 1px solid #67e8f9;
+  border-radius: 10px;
+
+  background-color: #164e63;
+  color: #cffafe;
+
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancellation-actions button:hover {
+  background-color: #155e75;
+}
+
+.cancellation-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.test-error {
+  margin-top: 20px;
+  padding: 14px;
+
+  border-radius: 10px;
+
+  background-color: #7f1d1d;
+  color: #fecaca;
+}
+
+.test-success {
+  margin-top: 20px;
+  color: #86efac;
+  font-weight: 700;
+}
+
+.test-result h3 {
+  margin-top: 20px;
+  color: #e2e8f0;
+}
+
+.test-result ul {
+  padding-left: 24px;
+  color: #cbd5e1;
+}
+
+.test-result li {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 480px) {
+  .cancellation-actions button {
+    width: 100%;
+  }
+}

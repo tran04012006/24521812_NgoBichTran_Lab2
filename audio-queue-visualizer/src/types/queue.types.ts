@@ -1,15 +1,9 @@
 import type { AudioTrack } from "./audio.types";
 
-/**
- * Current state of the FIFO queue.
- */
 export type QueueStatus =
   | "idle"
   | "processing";
 
-/**
- * Lifecycle state of an individual audio task.
- */
 export type TaskStatus =
   | "pending"
   | "processing"
@@ -18,56 +12,69 @@ export type TaskStatus =
   | "cancelled";
 
 /**
- * Represents one asynchronous audio task.
+ * Internal task representation.
  */
 export interface AudioTask {
   id: string;
-
   track: AudioTrack;
-
   status: TaskStatus;
 
   controller: AbortController;
 
   resolve: (buffer: AudioBuffer) => void;
-
   reject: (reason?: unknown) => void;
 }
 
 /**
- * Public information about a queued task.
- *
- * Does not expose internal Promise callbacks
- * or cancellation controller.
+ * Public information about a task.
  */
 export interface AudioTaskInfo {
-  id: string;
-
-  track: AudioTrack;
-
-  status: TaskStatus;
+  readonly id: string;
+  readonly track: Readonly<AudioTrack>;
+  readonly status: TaskStatus;
 }
 
 /**
- * Read-only description of the queue state.
+ * Public state of the entire queue.
  */
 export interface QueueSnapshot {
-  status: QueueStatus;
+  readonly status: QueueStatus;
 
-  pendingTasks: AudioTaskInfo[];
+  readonly pendingTasks:
+    readonly AudioTaskInfo[];
 
-  activeTask: AudioTaskInfo | null;
+  readonly activeTask:
+    AudioTaskInfo | null;
+
+  readonly history:
+    readonly AudioTaskInfo[];
 }
 
 /**
- * Public contract for the audio task queue.
- *
- * Actual implementation will be added in Task 2.
+ * Called when the queue state changes.
+ */
+export type QueueListener = (
+  snapshot: QueueSnapshot
+) => void;
+
+/**
+ * Function used to unsubscribe.
+ */
+export type QueueUnsubscribe = () => void;
+
+/**
+ * Public contract for the FIFO queue.
  */
 export interface AudioTaskQueueInterface {
-  enqueue(track: AudioTrack): Promise<AudioBuffer>;
+  enqueue(
+    track: AudioTrack
+  ): Promise<AudioBuffer>;
 
   cancel(taskId: string): void;
 
   getSnapshot(): QueueSnapshot;
+
+  subscribe(
+    listener: QueueListener
+  ): QueueUnsubscribe;
 }

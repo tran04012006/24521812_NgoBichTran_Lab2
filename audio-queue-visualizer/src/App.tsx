@@ -1,38 +1,28 @@
-import { useState } from "react";
-
 import AudioPlayer from "./components/AudioPlayer";
 import TrackQueue from "./components/TrackQueue";
 import AudioVisualizer from "./components/AudioVisualizer";
-import ScenarioSelector from "./components/ScenarioSelector";
 
-import {
-  defaultScenarioId,
-  demoScenarios,
-} from "./data/mockScenarios";
+import QueueControls from "./components/QueueControls";
+import QueueTestPanel from "./components/QueueTestPanel";
+import CancellationTestPanel from
+  "./components/CancellationTestPanel";
 
-import type {
-  ScenarioId,
-} from "./data/mockScenarios";
+import { useAudioQueue } from "./hooks/useAudioQueue";
+
+import { mockTracks } from "./data/mockTracks";
 
 import "./styles/App.css";
 
 function App() {
-  const [selectedScenarioId, setSelectedScenarioId] =
-    useState<ScenarioId>(defaultScenarioId);
-
-  const scenario = demoScenarios.find(
-    (item) => item.id === selectedScenarioId
-  );
-
-  if (!scenario) {
-    throw new Error(
-      "Selected demo scenario does not exist."
-    );
-  }
+  const {
+    snapshot,
+    enqueue,
+    cancel,
+  } = useAudioQueue();
 
   const selectedTrack =
-    scenario.snapshot.activeTask?.track ??
-    scenario.tasks[0]?.track ??
+    snapshot.activeTask?.track ??
+    snapshot.pendingTasks[0]?.track ??
     null;
 
   return (
@@ -47,26 +37,34 @@ function App() {
         </h1>
 
         <p>
-          An audio player powered by FIFO queue management,
-          Web Audio API, and real-time frequency analysis.
+          An audio player powered by FIFO queue
+          management, Web Audio API, and real-time
+          frequency analysis.
         </p>
       </header>
 
-      <ScenarioSelector
-        scenarios={demoScenarios}
-        selectedId={selectedScenarioId}
-        onSelect={setSelectedScenarioId}
+      <QueueControls
+        tracks={mockTracks}
+        onEnqueue={enqueue}
       />
 
       <div className="dashboard">
         <AudioPlayer track={selectedTrack} />
 
         <TrackQueue
-          tasks={scenario.tasks}
-          snapshot={scenario.snapshot}
+          snapshot={snapshot}
+          onCancel={cancel}
         />
 
         <AudioVisualizer />
+      </div>
+
+      <div className="queue-test-section">
+        <QueueTestPanel />
+      </div>
+
+      <div className="cancellation-test-section">
+        <CancellationTestPanel />
       </div>
     </main>
   );

@@ -1,0 +1,75 @@
+/* LIVE QUEUE GROUPS */
+
+.queue-group {
+  margin-top: 28px;
+}
+
+.queue-group h3 {
+  margin: 0 0 12px;
+
+  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* OVERRIDE EXISTING TRACK LIST LAYOUT */
+
+.queue-group .track-list {
+  margin-top: 12px;
+}
+
+.queue-group .track-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 14px;
+}
+
+.queue-group .track-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-group .queue-empty {
+  margin-top: 12px;
+}
+
+/* CANCELLATION */
+
+.queue-cancel-button {
+  flex-shrink: 0;
+
+  min-height: 40px;
+  padding: 8px 12px;
+
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+
+  background-color: #7f1d1d;
+  color: #fee2e2;
+
+  font-weight: 600;
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.queue-cancel-button:hover {
+  background-color: #991b1b;
+}
+
+.queue-cancel-button:focus-visible {
+  outline: 3px solid #67e8f9;
+  outline-offset: 3px;
+}
+
+@media (max-width: 420px) {
+  .queue-group .track-item {
+    flex-wrap: wrap;
+  }
+
+  .queue-cancel-button {
+    width: 100%;
+  }
+}

@@ -28,3 +28,37 @@ TASK 1 — PROJECT FOUNDATION
     ├── Run the TypeScript check
     ├── Verify the UI
     └── Git commit
+TASK 2 — FIFO QUEUE ENGINE
+│
+├── Step 1 — Core FIFO Queue
+│   ├── Queue Data Structure
+│   ├── Enqueue
+│   ├── Dequeue / Processing Loop
+│   ├── Single Consumer
+│   └── Promise Resolution
+│
+├── Step 2 — Task Lifecycle
+│   ├── Pending → Processing
+│   ├── Processing → Completed
+│   ├── Processing → Failed
+│   ├── Processing → Cancelled
+│   └── Queue State Notifications
+│
+├── Step 3 — Cancellation
+│   ├── Cancel Pending Task
+│   ├── Cancel Active Task
+│   ├── AbortController
+│   └── Prevent Stale Results
+│
+├── Step 4 — React Integration
+│   ├── useAudioQueue Hook
+│   ├── Queue State Subscription
+│   ├── Enqueue Controls
+│   └── Live Queue UI
+│
+└── Step 5 — Testing & Verification
+    ├── FIFO Order
+    ├── Concurrent Enqueue
+    ├── Promise Settlement
+    ├── Failure Recovery
+    └── Cancellation Tests
