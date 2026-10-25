@@ -1,0 +1,30 @@
+:root {
+  font-family: Inter, Arial, sans-serif;
+
+  color: #f8fafc;
+  background-color: #090e19;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
+}

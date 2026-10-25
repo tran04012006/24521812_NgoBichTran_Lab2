@@ -1,10 +1,50 @@
+import { useState } from "react";
+
+import AudioPlayer from "./components/AudioPlayer";
+import TrackQueue from "./components/TrackQueue";
+import AudioVisualizer from "./components/AudioVisualizer";
+import ScenarioSelector from "./components/ScenarioSelector";
+
+import {
+  defaultScenarioId,
+  demoScenarios,
+} from "./data/mockScenarios";
+
+import type {
+  ScenarioId,
+} from "./data/mockScenarios";
+
+import "./styles/App.css";
+
 function App() {
+  const [selectedScenarioId, setSelectedScenarioId] =
+    useState<ScenarioId>(defaultScenarioId);
+
+  const scenario = demoScenarios.find(
+    (item) => item.id === selectedScenarioId
+  );
+
+  if (!scenario) {
+    throw new Error(
+      "Selected demo scenario does not exist."
+    );
+  }
+
+  const selectedTrack =
+    scenario.snapshot.activeTask?.track ??
+    scenario.tasks[0]?.track ??
+    null;
+
   return (
     <main className="app">
       <header className="app-header">
-        <span className="app-badge">HOMEWORK 2</span>
+        <span className="app-badge">
+          HOMEWORK 2
+        </span>
 
-        <h1>Concurrent FIFO Audio Visualizer</h1>
+        <h1>
+          Concurrent FIFO Audio Visualizer
+        </h1>
 
         <p>
           An audio player powered by FIFO queue management,
@@ -12,18 +52,22 @@ function App() {
         </p>
       </header>
 
-      <section className="app-content">
-        <h2>Audio Queue Engine</h2>
+      <ScenarioSelector
+        scenarios={demoScenarios}
+        selectedId={selectedScenarioId}
+        onSelect={setSelectedScenarioId}
+      />
 
-        <p>
-          Project initialization completed successfully.
-        </p>
+      <div className="dashboard">
+        <AudioPlayer track={selectedTrack} />
 
-        <p>
-          Audio player, queue controller, and visualizer
-          will be implemented in the next steps.
-        </p>
-      </section>
+        <TrackQueue
+          tasks={scenario.tasks}
+          snapshot={scenario.snapshot}
+        />
+
+        <AudioVisualizer />
+      </div>
     </main>
   );
 }
