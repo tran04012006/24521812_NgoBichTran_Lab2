@@ -1,20 +1,20 @@
 import type { AudioTrack } from "../types";
 
+export const FFT_SIZE = 256;
+
 export class AudioEngine {
   private context: AudioContext | null = null;
 
   private source: AudioBufferSourceNode | null = null;
 
+  private analyser: AnalyserNode | null = null;
+
   private disposed = false;
 
   private closePromise: Promise<void> | null = null;
 
-  // Used to prevent stale asynchronous playback.
   private playVersion = 0;
 
-  /**
-   * Create one shared AudioContext lazily.
-   */
   private getContext(): AudioContext {
     if (this.disposed) {
       throw new Error("AudioEngine is disposed.");
@@ -25,6 +25,26 @@ export class AudioEngine {
     }
 
     return this.context;
+  }
+
+  /**
+   * Create one analyser for this AudioEngine.
+   */
+  private getAnalyser(
+    context: AudioContext
+  ): AnalyserNode {
+    if (!this.analyser) {
+      const analyser = context.createAnalyser();
+
+      analyser.fftSize = FFT_SIZE;
+      analyser.smoothingTimeConstant = 0.8;
+
+      analyser.connect(context.destination);
+
+      this.analyser = analyser;
+    }
+
+    return this.analyser;
   }
 
   /**
@@ -42,7 +62,8 @@ export class AudioEngine {
 
     if (!response.ok) {
       throw new Error(
-        `Unable to load ${track.title}: HTTP ${response.status}`
+        `Unable to load ${track.title}: ` +
+        `HTTP ${response.status}`
       );
     }
 
@@ -52,9 +73,8 @@ export class AudioEngine {
 
     const context = this.getContext();
 
-    const buffer = await context.decodeAudioData(
-      arrayBuffer
-    );
+    const buffer =
+      await context.decodeAudioData(arrayBuffer);
 
     this.assertUsable(signal);
 
@@ -63,8 +83,6 @@ export class AudioEngine {
 
   /**
    * Play a decoded AudioBuffer.
-   *
-   * A new source is created for every playback.
    */
   public async play(
     buffer: AudioBuffer,
@@ -74,19 +92,15 @@ export class AudioEngine {
       throw new Error("AudioEngine is disposed.");
     }
 
-    // Invalidate any previous play request.
     this.stop();
 
     const version = this.playVersion;
     const context = this.getContext();
 
-    // Browsers may suspend audio until user interaction.
     if (context.state === "suspended") {
       await context.resume();
     }
 
-    // Stop or a newer Play may have occurred
-    // while resume() was awaiting.
     if (
       this.disposed ||
       version !== this.playVersion
@@ -94,6 +108,7 @@ export class AudioEngine {
       return;
     }
 
+    const analyser = this.getAnalyser(context);
     const source = context.createBufferSource();
 
     source.buffer = buffer;
@@ -104,15 +119,15 @@ export class AudioEngine {
       }
 
       this.releaseSource(source);
-
       onEnded?.();
     };
 
     try {
-      source.connect(context.destination);
+      // New audio graph:
+      // source -> analyser -> destination
+      source.connect(analyser);
 
       this.source = source;
-
       source.start();
     } catch (error) {
       this.releaseSource(source);
@@ -121,9 +136,33 @@ export class AudioEngine {
   }
 
   /**
-   * Stop current playback.
+   * Read frequency data from the analyser.
    *
-   * Safe to call when nothing is playing.
+   * Returns false when there is no playback.
+   */
+  public readFrequencyData(
+    data: Uint8Array
+  ): boolean {
+    if (
+      this.disposed ||
+      !this.source ||
+      !this.analyser
+    ) {
+      return false;
+    }
+
+    this.analyser.getByteFrequencyData(data);
+
+    return true;
+  }
+
+  public get frequencyBinCount(): number {
+    return FFT_SIZE / 2;
+  }
+
+  /**
+   * Stop playback, but keep the analyser
+   * available for future playback.
    */
   public stop(): void {
     this.playVersion++;
@@ -134,18 +173,12 @@ export class AudioEngine {
       return;
     }
 
-    // Release ownership before stop().
-    // This prevents an old ended event from
-    // changing the state of a newer playback.
     this.source = null;
-
     source.onended = null;
 
     try {
       source.stop();
     } catch (error) {
-      // Ignore only the case where the source
-      // was never successfully started.
       if (
         !(error instanceof DOMException) ||
         error.name !== "InvalidStateError"
@@ -160,9 +193,6 @@ export class AudioEngine {
     }
   }
 
-  /**
-   * Disconnect a naturally ended source.
-   */
   private releaseSource(
     source: AudioBufferSourceNode
   ): void {
@@ -174,9 +204,6 @@ export class AudioEngine {
     source.disconnect();
   }
 
-  /**
-   * Check whether the current load is usable.
-   */
   private assertUsable(
     signal: AbortSignal
   ): void {
@@ -188,10 +215,7 @@ export class AudioEngine {
   }
 
   /**
-   * Stop playback and close AudioContext.
-   *
-   * The owning session must wait for its
-   * loading queue to finish shutting down first.
+   * Release playback and analyser resources.
    */
   public close(): Promise<void> {
     if (this.closePromise) {
@@ -199,8 +223,12 @@ export class AudioEngine {
     }
 
     this.disposed = true;
-
     this.stop();
+
+    if (this.analyser) {
+      this.analyser.disconnect();
+      this.analyser = null;
+    }
 
     const context = this.context;
     this.context = null;

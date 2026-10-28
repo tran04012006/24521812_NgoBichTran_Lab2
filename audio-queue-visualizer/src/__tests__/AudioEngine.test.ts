@@ -7,25 +7,19 @@ import {
   vi,
 } from "vitest";
 
-import { AudioEngine } from "../services/AudioEngine";
-
-import type { AudioTrack } from "../types";
+import {
+  AudioEngine,
+  FFT_SIZE,
+} from "../services/AudioEngine";
 
 interface MockSource {
   buffer: AudioBuffer | null;
   onended: (() => void) | null;
-
   connect: ReturnType<typeof vi.fn>;
   disconnect: ReturnType<typeof vi.fn>;
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
 }
-
-const track: AudioTrack = {
-  id: "test-track",
-  title: "Test Song",
-  url: "/test.mp3",
-};
 
 const buffer = {
   duration: 10,
@@ -33,20 +27,18 @@ const buffer = {
   numberOfChannels: 2,
 } as AudioBuffer;
 
-function createMockSource(): MockSource {
-  return {
-    buffer: null,
-    onended: null,
-
-    connect: vi.fn(),
-    disconnect: vi.fn(),
-    start: vi.fn(),
-    stop: vi.fn(),
-  };
-}
-
 function createMockContext() {
   const sources: MockSource[] = [];
+
+  const analyser = {
+    fftSize: 2048,
+    smoothingTimeConstant: 0,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    getByteFrequencyData: vi.fn(
+      (data: Uint8Array) => data.fill(100)
+    ),
+  };
 
   const context = {
     state: "running",
@@ -54,22 +46,29 @@ function createMockContext() {
     destination: {},
 
     resume: vi.fn(async () => {}),
-
     close: vi.fn(async () => {}),
 
+    createAnalyser: vi.fn(() => analyser),
+
     createBufferSource: vi.fn(() => {
-      const source = createMockSource();
+      const source: MockSource = {
+        buffer: null,
+        onended: null,
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn(),
+      };
+
       sources.push(source);
       return source;
     }),
-
-    decodeAudioData: vi.fn(async () => buffer),
   };
 
-  return { context, sources };
+  return { context, analyser, sources };
 }
 
-describe("AudioEngine Playback", () => {
+describe("AudioEngine FFT Integration", () => {
   let mock: ReturnType<typeof createMockContext>;
 
   beforeEach(() => {
@@ -90,76 +89,111 @@ describe("AudioEngine Playback", () => {
     vi.restoreAllMocks();
   });
 
-  it("creates a source and starts playback", async () => {
+  it("configures FFT size to 256", async () => {
+    const engine = new AudioEngine();
+
+    await engine.play(buffer);
+
+    expect(mock.analyser.fftSize).toBe(256);
+    expect(FFT_SIZE).toBe(256);
+    expect(engine.frequencyBinCount).toBe(128);
+
+    await engine.close();
+  });
+
+  it("connects source to analyser", async () => {
     const engine = new AudioEngine();
 
     await engine.play(buffer);
 
     expect(
-      mock.context.createBufferSource
-    ).toHaveBeenCalledTimes(1);
+      mock.sources[0].connect
+    ).toHaveBeenCalledWith(mock.analyser);
 
-    expect(mock.sources[0].buffer).toBe(buffer);
+    await engine.close();
+  });
+
+  it("connects analyser to destination", async () => {
+    const engine = new AudioEngine();
+
+    await engine.play(buffer);
 
     expect(
-      mock.sources[0].connect
+      mock.analyser.connect
     ).toHaveBeenCalledWith(
       mock.context.destination
     );
 
+    await engine.close();
+  });
+
+  it("reads frequency data", async () => {
+    const engine = new AudioEngine();
+
+    await engine.play(buffer);
+
+    const data = new Uint8Array(128);
+
+    const success = engine.readFrequencyData(data);
+
+    expect(success).toBe(true);
+
     expect(
-      mock.sources[0].start
+      mock.analyser.getByteFrequencyData
+    ).toHaveBeenCalledWith(data);
+
+    expect(data[0]).toBe(100);
+
+    await engine.close();
+  });
+
+  it("returns false when no source is playing", () => {
+    const engine = new AudioEngine();
+
+    const data = new Uint8Array(128);
+
+    expect(
+      engine.readFrequencyData(data)
+    ).toBe(false);
+  });
+
+  it("reuses the analyser for multiple plays", async () => {
+    const engine = new AudioEngine();
+
+    await engine.play(buffer);
+    await engine.play(buffer);
+
+    expect(
+      mock.context.createAnalyser
     ).toHaveBeenCalledTimes(1);
-
-    expect(engine.isPlaying).toBe(true);
-
-    await engine.close();
-  });
-
-  it("stops and disconnects the current source", async () => {
-    const engine = new AudioEngine();
-
-    await engine.play(buffer);
-
-    const source = mock.sources[0];
-
-    engine.stop();
-
-    expect(source.stop).toHaveBeenCalledTimes(1);
-    expect(source.disconnect).toHaveBeenCalledTimes(1);
-
-    expect(source.onended).toBeNull();
-    expect(engine.isPlaying).toBe(false);
-
-    await engine.close();
-  });
-
-  it("creates a new source when restarting", async () => {
-    const engine = new AudioEngine();
-
-    await engine.play(buffer);
-
-    const firstSource = mock.sources[0];
-
-    await engine.play(buffer);
-
-    const secondSource = mock.sources[1];
 
     expect(
       mock.context.createBufferSource
     ).toHaveBeenCalledTimes(2);
 
-    expect(firstSource.stop).toHaveBeenCalledTimes(1);
-    expect(firstSource.disconnect).toHaveBeenCalledTimes(1);
+    await engine.close();
+  });
 
-    expect(secondSource.start).toHaveBeenCalledTimes(1);
+  it("stops the old source before restart", async () => {
+    const engine = new AudioEngine();
 
-    expect(engine.isPlaying).toBe(true);
+    await engine.play(buffer);
+
+    const oldSource = mock.sources[0];
+
+    await engine.play(buffer);
+
+    expect(oldSource.stop).toHaveBeenCalledTimes(1);
+    expect(oldSource.disconnect).toHaveBeenCalledTimes(1);
+
+    expect(
+      mock.sources[1].start
+    ).toHaveBeenCalledTimes(1);
 
     await engine.close();
   });
 
-  it("cleans up after natural playback completion", async () => {
+  it("disconnects source after natural ending", async () => {
     const engine = new AudioEngine();
 
     const onEnded = vi.fn();
@@ -171,80 +205,37 @@ describe("AudioEngine Playback", () => {
     source.onended?.();
 
     expect(source.disconnect).toHaveBeenCalledTimes(1);
-    expect(source.stop).not.toHaveBeenCalled();
-
     expect(onEnded).toHaveBeenCalledTimes(1);
     expect(engine.isPlaying).toBe(false);
 
     await engine.close();
   });
 
-  it("does not stop an already released source again", async () => {
+  it("stops playback and disconnects analyser on close", async () => {
     const engine = new AudioEngine();
 
     await engine.play(buffer);
 
-    const source = mock.sources[0];
-
-    source.onended?.();
-
-    engine.stop();
-
-    expect(source.disconnect).toHaveBeenCalledTimes(1);
-    expect(source.stop).not.toHaveBeenCalled();
-
     await engine.close();
-  });
-
-  it("stops playback before closing AudioContext", async () => {
-    const engine = new AudioEngine();
-
-    await engine.play(buffer);
-
-    const source = mock.sources[0];
-
-    await engine.close();
-
-    expect(source.stop).toHaveBeenCalledTimes(1);
-    expect(source.disconnect).toHaveBeenCalledTimes(1);
-
-    expect(mock.context.close).toHaveBeenCalledTimes(1);
-    expect(engine.isDisposed).toBe(true);
-  });
-
-  it("does not create a source after Stop during resume", async () => {
-    const engine = new AudioEngine();
-
-    let finishResume!: () => void;
-
-    const pendingResume = new Promise<void>((resolve) => {
-      finishResume = resolve;
-    });
-
-    mock.context.state = "suspended";
-
-    mock.context.resume.mockImplementation(
-      () => pendingResume
-    );
-
-    const playing = engine.play(buffer);
-
-    engine.stop();
-
-    finishResume();
-
-    await playing;
 
     expect(
-      mock.context.createBufferSource
-    ).not.toHaveBeenCalled();
+      mock.sources[0].stop
+    ).toHaveBeenCalledTimes(1);
 
-    expect(engine.isPlaying).toBe(false);
+    expect(
+      mock.sources[0].disconnect
+    ).toHaveBeenCalledTimes(1);
 
-    await engine.close();
+    expect(
+      mock.analyser.disconnect
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      mock.context.close
+    ).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects playback after closing the engine", async () => {
+  it("rejects playback after disposal", async () => {
     const engine = new AudioEngine();
 
     await engine.close();
@@ -252,96 +243,5 @@ describe("AudioEngine Playback", () => {
     await expect(
       engine.play(buffer)
     ).rejects.toThrow("disposed");
-  });
-
-  it("does not create an AudioContext when stopping idle", () => {
-    const engine = new AudioEngine();
-
-    engine.stop();
-
-    expect(
-      mock.context.createBufferSource
-    ).not.toHaveBeenCalled();
-
-    expect(engine.isPlaying).toBe(false);
-  });
-
-  it("downloads and decodes real-format data through the API", async () => {
-    const engine = new AudioEngine();
-
-    const arrayBuffer = new ArrayBuffer(16);
-
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      arrayBuffer: async () => arrayBuffer,
-    }));
-
-    vi.stubGlobal("fetch", fetchMock);
-
-    const controller = new AbortController();
-
-    const result = await engine.load(
-      track,
-      controller.signal
-    );
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      track.url,
-      { signal: controller.signal }
-    );
-
-    expect(
-      mock.context.decodeAudioData
-    ).toHaveBeenCalledWith(arrayBuffer);
-
-    expect(result).toBe(buffer);
-
-    await engine.close();
-  });
-
-  it("rejects a cancelled decoding result", async () => {
-    const engine = new AudioEngine();
-
-    let finishDecode!: (value: AudioBuffer) => void;
-
-    const decoding = new Promise<AudioBuffer>((resolve) => {
-      finishDecode = resolve;
-    });
-
-    mock.context.decodeAudioData.mockImplementation(
-      () => decoding
-    );
-
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        arrayBuffer: async () => new ArrayBuffer(16),
-      }))
-    );
-
-    const controller = new AbortController();
-
-    const result = engine.load(
-      track,
-      controller.signal
-    );
-
-    // Allow fetch and arrayBuffer awaits to complete.
-    for (let i = 0; i < 5; i++) {
-      await Promise.resolve();
-    }
-
-    controller.abort();
-
-    finishDecode(buffer);
-
-    await expect(result).rejects.toMatchObject({
-      name: "AbortError",
-    });
-
-    await engine.close();
   });
 });

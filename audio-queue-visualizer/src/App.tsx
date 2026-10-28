@@ -4,15 +4,10 @@ import AudioVisualizer from "./components/AudioVisualizer";
 
 import QueueControls from "./components/QueueControls";
 import QueueTestPanel from "./components/QueueTestPanel";
-
-import CancellationTestPanel from
-  "./components/CancellationTestPanel";
-
-import AudioDecodeTestPanel from
-  "./components/AudioDecodeTestPanel";
+import CancellationTestPanel from "./components/CancellationTestPanel";
+import AudioDecodeTestPanel from "./components/AudioDecodeTestPanel";
 
 import { useAudioQueue } from "./hooks/useAudioQueue";
-
 import { mockTracks } from "./data/mockTracks";
 
 import "./styles/App.css";
@@ -28,6 +23,9 @@ function App() {
     playbackError,
     play,
     stop,
+
+    readFrequencyData,
+    frequencyBinCount,
   } = useAudioQueue();
 
   return (
@@ -42,8 +40,8 @@ function App() {
         </h1>
 
         <p>
-          FIFO queue management, real audio decoding,
-          and audio playback using Web Audio API.
+          Concurrent FIFO queue management,
+          Web Audio API, and live FFT visualization.
         </p>
       </header>
 
@@ -67,7 +65,11 @@ function App() {
           onCancel={cancel}
         />
 
-        <AudioVisualizer />
+        <AudioVisualizer
+          isPlaying={isPlaying}
+          frequencyBinCount={frequencyBinCount}
+          readFrequencyData={readFrequencyData}
+        />
       </div>
 
       <div className="audio-decode-test-section">

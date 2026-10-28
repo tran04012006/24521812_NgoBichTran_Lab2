@@ -39,8 +39,6 @@ export function useAudioQueue() {
     useState<string | null>(null);
 
   const mountedRef = useRef(false);
-
-  // Protect React state against late Play results.
   const playbackVersionRef = useRef(0);
 
   useEffect(() => {
@@ -68,9 +66,6 @@ export function useAudioQueue() {
     (track: AudioTrack): Promise<AudioBuffer> => {
       const promise = queue.enqueue(track);
 
-      // Store the most recently decoded track.
-      // Returning the same Promise preserves
-      // the existing QueueControls API.
       void promise.then(
         (buffer) => {
           if (!mountedRef.current) {
@@ -78,8 +73,8 @@ export function useAudioQueue() {
           }
 
           playbackVersionRef.current++;
-          engine.stop();
 
+          engine.stop();
           setIsPlaying(false);
           setPlaybackError(null);
 
@@ -89,9 +84,7 @@ export function useAudioQueue() {
           });
         },
         () => {
-          // QueueControls handles the error.
-          // This rejection handler prevents an
-          // unhandled branch from this observer.
+          // The caller handles rejection.
         }
       );
 
@@ -101,13 +94,13 @@ export function useAudioQueue() {
   );
 
   const cancel = useCallback(
-    (taskId: string): void => {
+    (taskId: string) => {
       queue.cancel(taskId);
     },
     [queue]
   );
 
-  const stop = useCallback((): void => {
+  const stop = useCallback(() => {
     playbackVersionRef.current++;
 
     engine.stop();
@@ -117,7 +110,7 @@ export function useAudioQueue() {
     }
   }, [engine]);
 
-  const play = useCallback(async (): Promise<void> => {
+  const play = useCallback(async () => {
     if (!loadedAudio) {
       return;
     }
@@ -163,15 +156,30 @@ export function useAudioQueue() {
     }
   }, [engine, loadedAudio]);
 
+  /**
+   * Read real FFT frequency data.
+   *
+   * Canvas calls this directly.
+   * It does not update React state.
+   */
+  const readFrequencyData = useCallback(
+    (data: Uint8Array): boolean => {
+      return engine.readFrequencyData(data);
+    },
+    [engine]
+  );
+
   return {
     snapshot,
     enqueue,
     cancel,
-
     loadedAudio,
     isPlaying,
     playbackError,
     play,
     stop,
+
+    readFrequencyData,
+    frequencyBinCount: engine.frequencyBinCount,
   };
 }
