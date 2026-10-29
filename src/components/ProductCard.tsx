@@ -1,5 +1,12 @@
 
+import { useEffect, useState } from "react";
+
 import type { Product } from "../types/product";
+
+import { useInventory } from "../hooks/useInventory";
+import { formatCountdown } from "../utils/time";
+
+import "./InventoryControls.css";
 
 interface ProductCardProps {
   product: Product;
@@ -8,11 +15,37 @@ interface ProductCardProps {
 export default function ProductCard({
   product,
 }: ProductCardProps) {
-  const totalStock = product.stock + product.sold;
+  const {
+    inventory,
+    reserve,
+    checkout,
+    release,
+  } = useInventory(product.id);
+
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (
+      inventory.status !== "reserved" ||
+      inventory.expiresAt === null
+    ) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [inventory.status, inventory.expiresAt]);
+
+  const totalStock =
+    inventory.availableStock + inventory.sold +
+    (inventory.status === "reserved" ? 1 : 0);
 
   const soldPercentage =
     totalStock > 0
-      ? (product.sold / totalStock) * 100
+      ? (inventory.sold / totalStock) * 100
       : 0;
 
   const discountPercentage =
@@ -23,12 +56,38 @@ export default function ProductCard({
         )
       : 0;
 
-  const formatPrice = (price: number): string => {
+  const remainingMs =
+    inventory.status === "reserved" &&
+    inventory.expiresAt !== null
+      ? Math.max(0, inventory.expiresAt - now)
+      : 0;
+
+  const canReserve =
+    inventory.availableStock > 0 &&
+    (
+      inventory.status === "available" ||
+      inventory.status === "expired" ||
+      inventory.status === "checked_out"
+    );
+
+  function formatPrice(price: number): string {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
     }).format(price);
-  };
+  }
+
+  async function handleReserve(): Promise<void> {
+    await reserve();
+  }
+
+  function handleCheckout(): void {
+    checkout();
+  }
+
+  function handleRelease(): void {
+    release();
+  }
 
   return (
     <article className="product-card">
@@ -61,10 +120,10 @@ export default function ProductCard({
 
         <div className="stock-information">
           <div className="stock-labels">
-            <span>Sold: {product.sold}</span>
+            <span>Sold: {inventory.sold}</span>
 
             <span>
-              Remaining: {product.stock}
+              Remaining: {inventory.availableStock}
             </span>
           </div>
 
@@ -85,13 +144,76 @@ export default function ProductCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          className="buy-button"
-          disabled
-        >
-          Buy Now — Coming Soon
-        </button>
+        <div className="inventory-status">
+          <span className="inventory-status-label">
+            Status:
+          </span>
+
+          <span
+            className={`inventory-badge status-${inventory.status}`}
+          >
+            {inventory.status.replace("_", " ")}
+          </span>
+        </div>
+
+        {inventory.status === "reserved" && (
+          <div className="reservation-info">
+            <span>Reservation expires in</span>
+
+            <strong aria-label="Reservation time remaining">
+              {formatCountdown(remainingMs)}
+            </strong>
+          </div>
+        )}
+
+        {inventory.status === "expired" && (
+          <p className="inventory-message">
+            Your reservation has expired.
+          </p>
+        )}
+
+        {inventory.status === "checked_out" && (
+          <p className="inventory-success">
+            Checkout completed successfully!
+          </p>
+        )}
+
+        <div className="inventory-actions">
+          {inventory.status === "reserved" ? (
+            <>
+              <button
+                type="button"
+                className="inventory-button checkout-button"
+                onClick={handleCheckout}
+              >
+                Checkout
+              </button>
+
+              <button
+                type="button"
+                className="inventory-button release-button"
+                onClick={handleRelease}
+              >
+                Release
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="inventory-button reserve-button"
+              disabled={!canReserve}
+              onClick={() => {
+                void handleReserve();
+              }}
+            >
+              {inventory.status === "reserving"
+                ? "Reserving..."
+                : inventory.availableStock === 0
+                  ? "Sold Out"
+                  : "Reserve Now"}
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

@@ -1,0 +1,134 @@
+
+.inventory-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.inventory-status-label {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.inventory-badge {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 6px;
+  text-transform: capitalize;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-available {
+  background: #14532d;
+  color: #dcfce7;
+}
+
+.status-reserving {
+  background: #713f12;
+  color: #fef08a;
+}
+
+.status-reserved {
+  background: #1e40af;
+  color: #dbeafe;
+}
+
+.status-expired {
+  background: #7f1d1d;
+  color: #fee2e2;
+}
+
+.status-checked_out {
+  background: #065f46;
+  color: #d1fae5;
+}
+
+.reservation-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid #38bdf8;
+  border-radius: 9px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.reservation-info strong {
+  color: #facc15;
+  font-size: clamp(16px, 2vw, 21px);
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-message {
+  margin: 12px 0;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.inventory-success {
+  margin: 12px 0;
+  color: #86efac;
+  font-size: 13px;
+}
+
+.inventory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.inventory-button {
+  flex: 1 1 100px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reserve-button {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.checkout-button {
+  background: #15803d;
+  color: #ffffff;
+}
+
+.release-button {
+  background: #475569;
+  color: #ffffff;
+}
+
+.inventory-button:disabled {
+  background: #475569;
+  color: #e2e8f0;
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.inventory-button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.inventory-button:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventory-button {
+    transition: none;
+  }
+}
