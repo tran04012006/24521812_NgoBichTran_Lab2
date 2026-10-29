@@ -56,33 +56,68 @@ export function transitionInventory(
       };
     }
 
-    case "RESERVATION_EXPIRED":
-    case "RELEASE": {
-      if (state.status !== "reserved") {
-        throw new Error("No active reservation");
-      }
-
-      return {
-        ...state,
-        status:
-          event.type === "RESERVATION_EXPIRED"
-            ? "expired"
-            : "available",
-        availableStock: state.availableStock + 1,
-        reservationId: null,
-        expiresAt: null,
-      };
-    }
-
-    case "CHECKOUT_SUCCESS": {
+    case "CHECKOUT_REQUEST": {
       if (state.status !== "reserved") {
         throw new Error("Checkout requires reservation");
       }
 
       return {
         ...state,
+        status: "checking_out",
+      };
+    }
+
+    case "CHECKOUT_FAILURE": {
+      if (state.status !== "checking_out") {
+        throw new Error("No checkout is processing");
+      }
+
+      return {
+        ...state,
+        status: "reserved",
+      };
+    }
+
+    case "CHECKOUT_SUCCESS": {
+      if (state.status !== "checking_out") {
+        throw new Error("Invalid checkout confirmation");
+      }
+
+      return {
+        ...state,
         status: "checked_out",
         sold: state.sold + 1,
+        reservationId: null,
+        expiresAt: null,
+      };
+    }
+
+    case "RESERVATION_EXPIRED": {
+      if (
+        state.status !== "reserved" &&
+        state.status !== "checking_out"
+      ) {
+        throw new Error("No active reservation");
+      }
+
+      return {
+        ...state,
+        status: "expired",
+        availableStock: state.availableStock + 1,
+        reservationId: null,
+        expiresAt: null,
+      };
+    }
+
+    case "RELEASE": {
+      if (state.status !== "reserved") {
+        throw new Error("Cannot release reservation");
+      }
+
+      return {
+        ...state,
+        status: "available",
+        availableStock: state.availableStock + 1,
         reservationId: null,
         expiresAt: null,
       };

@@ -25,14 +25,18 @@ function makeStore(duration = 30000) {
   return createInventoryStore([{ ...product }], duration);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 test("reserve decreases available stock", async () => {
   const store = makeStore();
 
   try {
-    const result = await store.reserve("P001");
+    assert.equal(await store.reserve("P001"), true);
+
     const state = store.getSnapshot("P001");
 
-    assert.equal(result, true);
     assert.equal(state.status, "reserved");
     assert.equal(state.availableStock, 0);
     assert.notEqual(state.reservationId, null);
@@ -66,7 +70,11 @@ test("checkout increments sold count", async () => {
   try {
     await store.reserve("P001");
 
-    assert.equal(store.checkout("P001"), true);
+    const id = store.getSnapshot("P001").reservationId;
+
+    const result = await store.checkout("P001", id);
+
+    assert.deepEqual(result, { ok: true });
 
     const state = store.getSnapshot("P001");
 
@@ -84,7 +92,9 @@ test("release returns inventory", async () => {
   try {
     await store.reserve("P001");
 
-    assert.equal(store.release("P001"), true);
+    const id = store.getSnapshot("P001").reservationId;
+
+    assert.equal(store.release("P001", id), true);
 
     const state = store.getSnapshot("P001");
 
@@ -96,47 +106,39 @@ test("release returns inventory", async () => {
   }
 });
 
-test("expired reservation restores stock", async () => {
-  const store = makeStore();
+test("automatic expiration restores stock", async () => {
+  const store = makeStore(15);
 
   try {
     await store.reserve("P001");
-
-    const id = store.getSnapshot("P001").reservationId;
-
-    assert.notEqual(id, null);
-    assert.equal(store.expire("P001", id), true);
+    await sleep(40);
 
     const state = store.getSnapshot("P001");
 
     assert.equal(state.status, "expired");
     assert.equal(state.availableStock, 1);
-    assert.equal(store.checkout("P001"), false);
   } finally {
     store.dispose();
   }
 });
 
-test("old reservation cannot expire a new one", async () => {
+test("old reservation ID cannot release a new one", async () => {
   const store = makeStore();
 
   try {
     await store.reserve("P001");
 
-    const oldId =
-      store.getSnapshot("P001").reservationId;
+    const oldId = store.getSnapshot("P001").reservationId;
 
-    assert.notEqual(oldId, null);
-
-    store.release("P001");
+    store.release("P001", oldId);
     await store.reserve("P001");
 
-    const current =
-      store.getSnapshot("P001");
+    const current = store.getSnapshot("P001");
 
     assert.notEqual(current.reservationId, oldId);
-
+    assert.equal(store.release("P001", oldId), false);
     assert.equal(store.expire("P001", oldId), false);
+
     assert.equal(
       store.getSnapshot("P001").status,
       "reserved"
@@ -154,7 +156,7 @@ test("invalid checkout transition is rejected", () => {
 
     assert.throws(() => {
       transitionInventory(state, {
-        type: "CHECKOUT_SUCCESS",
+        type: "CHECKOUT_REQUEST",
       });
     }, /Checkout requires reservation/);
   } finally {
@@ -162,66 +164,51 @@ test("invalid checkout transition is rejected", () => {
   }
 });
 
-test("automatic expiration restores stock", async () => {
-  const store = makeStore(15);
-
-  try {
-    await store.reserve("P001");
-
-    await new Promise((resolve) => {
-      setTimeout(resolve, 40);
-    });
-
-    const state = store.getSnapshot("P001");
-
-    assert.equal(state.status, "expired");
-    assert.equal(state.availableStock, 1);
-  } finally {
-    store.dispose();
-  }
-});
-
-test("subscribers receive inventory changes", async () => {
+test("subscribers receive changes", async () => {
   const store = makeStore();
 
   try {
-    let notifications = 0;
+    let count = 0;
 
     const unsubscribe = store.subscribe(
       "P001",
-      () => notifications++
+      () => count++
     );
 
     await store.reserve("P001");
 
-    assert.ok(notifications >= 2);
+    assert.ok(count >= 2);
 
-    const before = notifications;
-
+    const before = count;
     unsubscribe();
-    store.release("P001");
 
-    assert.equal(notifications, before);
+    const id = store.getSnapshot("P001").reservationId;
+    store.release("P001", id);
+
+    assert.equal(count, before);
   } finally {
     store.dispose();
   }
 });
 
-test("cannot checkout after reservation deadline", async () => {
+test("checkout after deadline is rejected", async () => {
   const store = makeStore(15);
 
   try {
     await store.reserve("P001");
 
-    await new Promise((resolve) => {
-      setTimeout(resolve, 40);
+    const id = store.getSnapshot("P001").reservationId;
+
+    await sleep(40);
+
+    const result = await store.checkout("P001", id);
+
+    assert.deepEqual(result, {
+      ok: false,
+      reason: "EXPIRED",
     });
 
-    assert.equal(store.checkout("P001"), false);
-    assert.equal(
-      store.getSnapshot("P001").sold,
-      0
-    );
+    assert.equal(store.getSnapshot("P001").sold, 0);
   } finally {
     store.dispose();
   }

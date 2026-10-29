@@ -2,7 +2,9 @@
 import type { Product } from "../types/product";
 
 import type {
+  CheckoutResult,
   InventorySnapshot,
+  PaymentProcessor,
 } from "../types/inventory";
 
 import {
@@ -13,23 +15,36 @@ type Listener = () => void;
 
 export interface InventoryStore {
   getSnapshot: (productId: string) => InventorySnapshot;
+
   subscribe: (
     productId: string,
     listener: Listener
   ) => () => void;
+
   reserve: (productId: string) => Promise<boolean>;
-  checkout: (productId: string) => boolean;
-  release: (productId: string) => boolean;
+
+  checkout: (
+    productId: string,
+    reservationId: string
+  ) => Promise<CheckoutResult>;
+
+  release: (
+    productId: string,
+    reservationId: string
+  ) => boolean;
+
   expire: (
     productId: string,
     reservationId: string
   ) => boolean;
+
   dispose: () => void;
 }
 
 export function createInventoryStore(
   products: Product[],
-  reservationDurationMs = 30_000
+  reservationDurationMs = 30_000,
+  paymentProcessor: PaymentProcessor = async () => true
 ): InventoryStore {
   if (
     !Number.isFinite(reservationDurationMs) ||
@@ -40,7 +55,11 @@ export function createInventoryStore(
 
   const states = new Map<string, InventorySnapshot>();
   const listeners = new Map<string, Set<Listener>>();
-  const timeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+  const timeouts = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >();
 
   let nextReservationId = 1;
   let disposed = false;
@@ -68,7 +87,9 @@ export function createInventoryStore(
     listeners.set(product.id, new Set());
   }
 
-  function getSnapshot(productId: string): InventorySnapshot {
+  function getSnapshot(
+    productId: string
+  ): InventorySnapshot {
     const state = states.get(productId);
 
     if (!state) {
@@ -80,9 +101,11 @@ export function createInventoryStore(
 
   function publish(
     productId: string,
-    nextState: InventorySnapshot
+    state: InventorySnapshot
   ): void {
-    states.set(productId, nextState);
+    if (disposed) return;
+
+    states.set(productId, state);
 
     listeners.get(productId)?.forEach((listener) => {
       listener();
@@ -107,8 +130,13 @@ export function createInventoryStore(
     const state = getSnapshot(productId);
 
     if (
-      state.status !== "reserved" ||
-      state.reservationId !== reservationId
+      (
+        state.status !== "reserved" &&
+        state.status !== "checking_out"
+      ) ||
+      state.reservationId !== reservationId ||
+      state.expiresAt === null ||
+      Date.now() < state.expiresAt
     ) {
       return false;
     }
@@ -129,10 +157,13 @@ export function createInventoryStore(
     const state = getSnapshot(productId);
 
     if (
-      state.status === "reserved" &&
+      (
+        state.status === "reserved" ||
+        state.status === "checking_out"
+      ) &&
       state.expiresAt !== null &&
-      Date.now() >= state.expiresAt &&
-      state.reservationId !== null
+      state.reservationId !== null &&
+      Date.now() >= state.expiresAt
     ) {
       expire(productId, state.reservationId);
     }
@@ -148,16 +179,17 @@ export function createInventoryStore(
     const current = getSnapshot(productId);
 
     try {
-      const pending = transitionInventory(current, {
-        type: "RESERVE_REQUEST",
-      });
-
-      publish(productId, pending);
+      publish(
+        productId,
+        transitionInventory(current, {
+          type: "RESERVE_REQUEST",
+        })
+      );
     } catch {
       return false;
     }
 
-    // Simulate an asynchronous server response.
+    // Simulated asynchronous reservation response.
     await Promise.resolve();
 
     if (disposed) return false;
@@ -174,13 +206,14 @@ export function createInventoryStore(
     const expiresAt =
       Date.now() + reservationDurationMs;
 
-    const reserved = transitionInventory(pending, {
-      type: "RESERVE_SUCCESS",
-      reservationId,
-      expiresAt,
-    });
-
-    publish(productId, reserved);
+    publish(
+      productId,
+      transitionInventory(pending, {
+        type: "RESERVE_SUCCESS",
+        reservationId,
+        expiresAt,
+      })
+    );
 
     const timeout = setTimeout(() => {
       expire(productId, reservationId);
@@ -191,37 +224,118 @@ export function createInventoryStore(
     return true;
   }
 
-  function checkout(productId: string): boolean {
-    if (disposed) return false;
+  async function checkout(
+    productId: string,
+    reservationId: string
+  ): Promise<CheckoutResult> {
+    if (disposed) {
+      return { ok: false, reason: "STORE_DISPOSED" };
+    }
 
     expireIfNeeded(productId);
 
-    const state = getSnapshot(productId);
+    const current = getSnapshot(productId);
 
-    if (state.status !== "reserved") {
-      return false;
+    if (current.status === "checking_out") {
+      return {
+        ok: false,
+        reason: "ALREADY_PROCESSING",
+      };
+    }
+
+    if (current.status === "expired") {
+      return { ok: false, reason: "EXPIRED" };
+    }
+
+    if (
+      current.status !== "reserved" ||
+      current.reservationId !== reservationId ||
+      current.expiresAt === null
+    ) {
+      return {
+        ok: false,
+        reason: "INVALID_RESERVATION",
+      };
+    }
+
+    publish(
+      productId,
+      transitionInventory(current, {
+        type: "CHECKOUT_REQUEST",
+      })
+    );
+
+    let paymentSucceeded = false;
+
+    try {
+      paymentSucceeded =
+        await paymentProcessor(reservationId);
+    } catch {
+      paymentSucceeded = false;
+    }
+
+    if (disposed) {
+      return { ok: false, reason: "STORE_DISPOSED" };
+    }
+
+    expireIfNeeded(productId);
+
+    const latest = getSnapshot(productId);
+
+    if (latest.status === "expired") {
+      return { ok: false, reason: "EXPIRED" };
+    }
+
+    if (
+      latest.status !== "checking_out" ||
+      latest.reservationId !== reservationId
+    ) {
+      return {
+        ok: false,
+        reason: "INVALID_RESERVATION",
+      };
+    }
+
+    if (!paymentSucceeded) {
+      publish(
+        productId,
+        transitionInventory(latest, {
+          type: "CHECKOUT_FAILURE",
+        })
+      );
+
+      return {
+        ok: false,
+        reason: "PAYMENT_FAILED",
+      };
     }
 
     clearExpiry(productId);
 
     publish(
       productId,
-      transitionInventory(state, {
+      transitionInventory(latest, {
         type: "CHECKOUT_SUCCESS",
       })
     );
 
-    return true;
+    return { ok: true };
   }
 
-  function release(productId: string): boolean {
+  function release(
+    productId: string,
+    reservationId: string
+  ): boolean {
     if (disposed) return false;
 
     expireIfNeeded(productId);
 
     const state = getSnapshot(productId);
 
-    if (state.status !== "reserved") {
+    if (
+      state.status !== "reserved" ||
+      state.reservationId !== reservationId
+    ) {
       return false;
     }
 
