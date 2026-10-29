@@ -1,7 +1,14 @@
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import type { Product } from "../types/product";
+
+import type {
+  CheckoutFailureReason,
+} from "../types/inventory";
 
 import { useInventory } from "../hooks/useInventory";
 import { formatCountdown } from "../utils/time";
@@ -10,6 +17,34 @@ import "./InventoryControls.css";
 
 interface ProductCardProps {
   product: Product;
+}
+
+function getCheckoutError(
+  reason: CheckoutFailureReason
+): string {
+  switch (reason) {
+    case "INVALID_RESERVATION":
+      return "Invalid reservation. Please reserve again.";
+
+    case "EXPIRED":
+      return "Reservation expired before checkout finished.";
+
+    case "ALREADY_PROCESSING":
+      return "Checkout is already processing.";
+
+    case "PAYMENT_FAILED":
+      return "Payment failed. You may retry before expiry.";
+
+    case "STORE_DISPOSED":
+      return "Checkout is no longer available.";
+  }
+}
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(price);
 }
 
 export default function ProductCard({
@@ -23,25 +58,39 @@ export default function ProductCard({
   } = useInventory(product.id);
 
   const [now, setNow] = useState(Date.now());
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] =
+    useState<"success" | "error" | "info">("info");
 
   useEffect(() => {
     if (
-      inventory.status !== "reserved" ||
+      (
+        inventory.status !== "reserved" &&
+        inventory.status !== "checking_out"
+      ) ||
       inventory.expiresAt === null
     ) {
       return;
     }
 
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 100);
+    const updateTime = () => setNow(Date.now());
+
+    updateTime();
+
+    const interval = setInterval(updateTime, 100);
 
     return () => clearInterval(interval);
   }, [inventory.status, inventory.expiresAt]);
 
   const totalStock =
-    inventory.availableStock + inventory.sold +
-    (inventory.status === "reserved" ? 1 : 0);
+    inventory.availableStock +
+    inventory.sold +
+    (
+      inventory.status === "reserved" ||
+      inventory.status === "checking_out"
+        ? 1
+        : 0
+    );
 
   const soldPercentage =
     totalStock > 0
@@ -57,8 +106,11 @@ export default function ProductCard({
       : 0;
 
   const remainingMs =
-    inventory.status === "reserved" &&
-    inventory.expiresAt !== null
+    inventory.expiresAt !== null &&
+    (
+      inventory.status === "reserved" ||
+      inventory.status === "checking_out"
+    )
       ? Math.max(0, inventory.expiresAt - now)
       : 0;
 
@@ -70,23 +122,72 @@ export default function ProductCard({
       inventory.status === "checked_out"
     );
 
-  function formatPrice(price: number): string {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price);
-  }
+  const isReserved = inventory.status === "reserved";
+  const isCheckingOut =
+    inventory.status === "checking_out";
 
   async function handleReserve(): Promise<void> {
-    await reserve();
+    setMessage("");
+
+    try {
+      const success = await reserve();
+
+      if (!success) {
+        setMessage("Unable to reserve this product.");
+        setMessageType("error");
+        return;
+      }
+
+      setMessage("Product reserved for 30 seconds.");
+      setMessageType("success");
+    } catch {
+      setMessage("An unexpected reservation error occurred.");
+      setMessageType("error");
+    }
   }
 
-  function handleCheckout(): void {
-    checkout();
+  async function handleCheckout(): Promise<void> {
+    const reservationId = inventory.reservationId;
+
+    if (!reservationId) {
+      setMessage("No valid reservation.");
+      setMessageType("error");
+      return;
+    }
+
+    setMessage("Processing checkout...");
+    setMessageType("info");
+
+    try {
+      const result = await checkout(reservationId);
+
+      if (result.ok) {
+        setMessage("Checkout completed successfully!");
+        setMessageType("success");
+      } else {
+        setMessage(getCheckoutError(result.reason));
+        setMessageType("error");
+      }
+    } catch {
+      setMessage("An unexpected checkout error occurred.");
+      setMessageType("error");
+    }
   }
 
   function handleRelease(): void {
-    release();
+    const reservationId = inventory.reservationId;
+
+    if (!reservationId) return;
+
+    const success = release(reservationId);
+
+    if (success) {
+      setMessage("Reservation released.");
+      setMessageType("info");
+    } else {
+      setMessage("Reservation could not be released.");
+      setMessageType("error");
+    }
   }
 
   return (
@@ -156,11 +257,11 @@ export default function ProductCard({
           </span>
         </div>
 
-        {inventory.status === "reserved" && (
+        {(isReserved || isCheckingOut) && (
           <div className="reservation-info">
             <span>Reservation expires in</span>
 
-            <strong aria-label="Reservation time remaining">
+            <strong role="timer">
               {formatCountdown(remainingMs)}
             </strong>
           </div>
@@ -168,23 +269,43 @@ export default function ProductCard({
 
         {inventory.status === "expired" && (
           <p className="inventory-message">
-            Your reservation has expired.
+            Reservation expired.
           </p>
         )}
 
-        {inventory.status === "checked_out" && (
-          <p className="inventory-success">
-            Checkout completed successfully!
+        {isCheckingOut && (
+          <div
+            className="checkout-processing"
+            role="status"
+          >
+            <span
+              className="checkout-spinner"
+              aria-hidden="true"
+            />
+            Processing checkout...
+          </div>
+        )}
+
+        {message && (
+          <p
+            className={`checkout-feedback feedback-${messageType}`}
+            role="status"
+            aria-live="polite"
+          >
+            {message}
           </p>
         )}
 
         <div className="inventory-actions">
-          {inventory.status === "reserved" ? (
+          {isReserved ? (
             <>
               <button
                 type="button"
                 className="inventory-button checkout-button"
-                onClick={handleCheckout}
+                onClick={() => {
+                  void handleCheckout();
+                }}
+                disabled={remainingMs === 0}
               >
                 Checkout
               </button>
@@ -197,6 +318,14 @@ export default function ProductCard({
                 Release
               </button>
             </>
+          ) : isCheckingOut ? (
+            <button
+              type="button"
+              className="inventory-button checkout-button"
+              disabled
+            >
+              Processing...
+            </button>
           ) : (
             <button
               type="button"

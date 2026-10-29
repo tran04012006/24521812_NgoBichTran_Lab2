@@ -5,18 +5,19 @@ Homework 3 - Vietnam Flash Sale Simulation
 
 ## Overview
 
-A Flash Sale simulation using React, TypeScript
-and Vite.
+A Flash Sale simulation built with React,
+TypeScript, and Vite.
 
-Main topics:
-- Zero-drift countdown
-- Inventory reservation state machine
-- Concurrency control simulation
-- Reservation expiration
-- Checkout
-- AI failure mode audit
+Implemented features:
+- Zero-drift Flash Sale countdown
+- Inventory state machine
+- Reservation with expiry
+- Guarded asynchronous checkout
+- Payment success/failure simulation
+- Duplicate checkout protection
+- Unit tests for race conditions
 
-## Tech Stack
+## Technology Stack
 
 - React
 - TypeScript
@@ -25,15 +26,21 @@ Main topics:
 - Node.js
 - tsx test runner
 
+## Requirements
+
+- Node.js compatible with the Vite project
+- npm
+- Git
+
 ## Getting Started
 
-Install dependencies:
+Install:
 
 ```bash
 npm install
 ```
 
-Run development server:
+Start development:
 
 ```bash
 npm run dev
@@ -47,6 +54,12 @@ npm run build
 
 ## Unit Tests
 
+All tests:
+
+```bash
+node --import tsx --test tests/*.test.mjs
+```
+
 Timer tests:
 
 ```bash
@@ -59,10 +72,10 @@ Inventory tests:
 node --import tsx --test tests/inventory.test.mjs
 ```
 
-Run all tests:
+Checkout tests:
 
 ```bash
-node --import tsx --test tests/*.test.mjs
+node --import tsx --test tests/checkout.test.mjs
 ```
 
 ## Project Structure
@@ -71,8 +84,8 @@ node --import tsx --test tests/*.test.mjs
 src/
   components/
     FlashSaleHeader.tsx
-    InventoryControls.css
     ProductCard.tsx
+    InventoryControls.css
   data/
     products.ts
   hooks/
@@ -81,8 +94,8 @@ src/
   services/
     inventoryStore.ts
   types/
-    inventory.ts
     product.ts
+    inventory.ts
   utils/
     anti-drift-timer.ts
     inventoryMachine.ts
@@ -95,69 +108,71 @@ src/
 tests/
   anti-drift-timer.test.mjs
   inventory.test.mjs
+  checkout.test.mjs
 ```
 
-## Inventory State Machine
+## Reservation Flow
 
-Supported states:
+1. User requests a reservation.
+2. Inventory transitions to reserving.
+3. Reservation succeeds if stock is available.
+4. Available stock decreases.
+5. Reservation receives an ID and expiry time.
+6. User can checkout or release.
+7. Expired reservation restores available stock.
 
-- available
-- reserving
-- reserved
-- expired
-- checked_out
+## Checkout Flow
 
-Main transitions:
+1. Validate reservation ID.
+2. Validate reservation status.
+3. Check expiration deadline.
+4. Transition reserved -> checking_out.
+5. Execute simulated payment asynchronously.
+6. Recheck reservation status and deadline.
+7. On success, transition to checked_out.
+8. On payment failure, return to reserved
+   if the reservation is still valid.
+9. On expiry, restore available stock.
 
-available -> reserving -> reserved
+## Concurrency Scope
 
-reserved -> expired
-reserved -> available (release)
-reserved -> checked_out
+The current implementation blocks duplicate
+checkout requests within a single JavaScript store.
 
-expired -> reserving
-checked_out -> reserving (if stock remains)
+It also prevents stale reservation IDs from
+releasing current reservations.
 
-Reservation duration: 30 seconds.
+This is NOT distributed transaction management.
 
-## Inventory Rules
+## Production Requirements
 
-1. A product must have stock before reservation.
-2. A product cannot be reserved twice while pending.
-3. Reservation confirmation decreases available stock.
-4. Expiration restores available stock.
-5. Checkout requires a valid reservation.
-6. Checkout increases the sold count.
-7. Old reservation timeouts cannot release new ones.
+A real Flash Sale system additionally requires:
 
-## Scope and Limitations
+- Server-authoritative inventory
+- Authentication and authorization
+- Atomic database stock updates
+- Durable reservation records
+- Idempotency keys
+- Payment reconciliation and refunds
+- Transaction recovery after crashes
+- Load testing across multiple clients
 
-Inventory is stored in browser memory.
+## Known Limitations
 
-Each browser has an independent store.
-Refreshing the page resets demo inventory.
-
-This implementation demonstrates state transitions
-and concurrency within one JavaScript store.
-
-It is not a production-grade distributed inventory
-locking solution.
-
-Real e-commerce concurrency requires:
-- Server-authoritative stock
-- Atomic database operations
-- Reservation ownership validation
-- Idempotent checkout
-- Consistent payment and order processing
-
-The current checkout only simulates success.
+- Inventory is stored in browser memory.
+- Refreshing resets demo inventory.
+- Different browsers have independent stores.
+- Payment is simulated.
+- Product reservations are not user-authenticated.
+- Client clock is not server-authoritative.
+- A successful mock payment is not a real charge.
 
 ## Task Progress
 
 - [x] Task 1: Project Setup & Architecture
 - [x] Task 2: Zero-Drift Countdown Timer
 - [x] Task 3: Inventory State Machine
-- [ ] Task 4: Reservation & Checkout Integration
+- [x] Task 4: Reservation & Checkout Integration
 - [ ] Task 5: Testing & AI Failure Audit
 - [ ] Task 6: Final Verification & Git Review
 

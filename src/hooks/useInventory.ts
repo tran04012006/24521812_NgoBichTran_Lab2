@@ -12,7 +12,15 @@ import {
 
 const inventoryStore = createInventoryStore(
   products,
-  30_000
+  30_000,
+  async () => {
+    // Simulated successful payment.
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 1200);
+    });
+
+    return true;
+  }
 );
 
 export function useInventory(productId: string) {
@@ -43,12 +51,20 @@ export function useInventory(productId: string) {
   );
 
   const checkout = useCallback(
-    () => inventoryStore.checkout(productId),
+    (reservationId: string) =>
+      inventoryStore.checkout(
+        productId,
+        reservationId
+      ),
     [productId]
   );
 
   const release = useCallback(
-    () => inventoryStore.release(productId),
+    (reservationId: string) =>
+      inventoryStore.release(
+        productId,
+        reservationId
+      ),
     [productId]
   );
 
