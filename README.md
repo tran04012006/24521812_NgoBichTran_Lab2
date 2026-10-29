@@ -5,10 +5,11 @@ Homework 3 - Vietnam Flash Sale Simulation
 
 ## Project Overview
 
-A Flash Sale E-Commerce simulation built using
-React and TypeScript.
+A Flash Sale E-Commerce simulation built with
+React, TypeScript, and Vite.
 
 The project focuses on:
+
 - Zero-drift countdown timer
 - Inventory reservation state machine
 - High-concurrency scenarios
@@ -21,68 +22,103 @@ The project focuses on:
 - TypeScript
 - Vite
 - CSS
+- Node.js built-in test runner
 
-## Getting Started
+## Requirements
 
-### Prerequisites
-
-- Node.js compatible with the installed Vite version
+- Node.js 22.12+ for the Task 2 test command
 - npm
 - Git
 
-### Installation
+## Installation
 
+```bash
 npm install
+```
 
-### Development
+## Development
 
+```bash
 npm run dev
+```
 
-### Production Build
+## Production Build
 
+```bash
 npm run build
+```
 
-### Preview
+## Tests
 
-npm run preview
+```bash
+node --experimental-strip-types --test tests/anti-drift-timer.test.mjs
+```
 
 ## Project Structure
 
+```text
 src/
   components/
     FlashSaleHeader.tsx
     ProductCard.tsx
   data/
     products.ts
+  hooks/
+    useCountdown.ts
   types/
     product.ts
+  utils/
+    anti-drift-timer.ts
+    time.ts
   App.tsx
   App.css
   index.css
   main.tsx
 
+tests/
+  anti-drift-timer.test.mjs
+```
+
 ## Task Progress
 
-- [ ] Task 1: Project Setup & Architecture
-- [ ] Task 2: Zero-Drift Countdown Timer
+- [x] Task 1: Project Setup & Architecture
+- [x] Task 2: Zero-Drift Countdown Timer
 - [ ] Task 3: Inventory State Machine
 - [ ] Task 4: Reservation and Checkout Integration
 - [ ] Task 5: Testing and AI Failure Audit
 - [ ] Task 6: Final Verification and Git Review
 
-## Task 1 Scope
+## Timer Architecture
 
-The frontend displays mock product information,
-a static countdown preview, and disabled purchase buttons.
+The anti-drift timer uses an absolute target timestamp.
 
-No inventory reservation, checkout, or backend
-concurrency control has been implemented yet.
+remainingMs = max(0, targetTime - Date.now())
+
+requestAnimationFrame schedules visual updates,
+but does not determine elapsed time.
+
+The timer supports:
+- Start
+- Pause
+- Resume
+- Restart
+- Stop
+- Completion callback
+
+The useCountdown hook integrates the timer
+with React state and component lifecycle.
+
+## Task 2 Limitations
+
+- The countdown uses the client computer clock.
+- Pause and Restart are development/demo controls.
+- The timer starts again on a full page reload.
+- Inventory reservation and checkout are not yet active.
+- Real Flash Sale deadlines should be server-authoritative.
 
 ## Notes
 
 This project simulates a Vietnam 11.11 Flash Sale.
 
-The implementation is expanded incrementally
-through six tasks.
-
 See task_decomposition.md for detailed progress.
+```

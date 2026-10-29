@@ -4,10 +4,14 @@ import ProductCard from "./components/ProductCard";
 import { products } from "./data/products";
 import "./App.css";
 
+const FLASH_SALE_DURATION_MS = 15 * 60 * 1000;
+
 export default function App() {
   return (
     <div className="app-container">
-      <FlashSaleHeader />
+      <FlashSaleHeader
+        durationMs={FLASH_SALE_DURATION_MS}
+      />
 
       <main className="main-content">
         <section

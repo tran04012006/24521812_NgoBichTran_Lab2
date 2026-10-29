@@ -1,5 +1,26 @@
 
-export default function FlashSaleHeader() {
+import { useCountdown } from "../hooks/useCountdown";
+import { formatCountdown } from "../utils/time";
+
+interface FlashSaleHeaderProps {
+  durationMs: number;
+}
+
+export default function FlashSaleHeader({
+  durationMs,
+}: FlashSaleHeaderProps) {
+  const {
+    remainingMs,
+    status,
+    pause,
+    resume,
+    restart,
+  } = useCountdown(durationMs);
+
+  const isRunning = status === "running";
+  const isPaused = status === "paused";
+  const isCompleted = status === "completed";
+
   return (
     <header className="flash-sale-header">
       <div className="header-content">
@@ -10,24 +31,58 @@ export default function FlashSaleHeader() {
         <h1>Vietnam Flash Sale</h1>
 
         <p>
-          Discover amazing products at incredible prices.
+          Discover amazing products at
+          incredible prices.
         </p>
 
         <div className="countdown-section">
           <span className="countdown-label">
-            Sale countdown (preview)
+            Flash Sale Ends In
           </span>
 
           <div
             className="countdown-display"
-            aria-label="Countdown preview: 15 minutes"
+            role="timer"
+            aria-label="Flash Sale remaining time"
           >
-            00:15:00
+            {formatCountdown(remainingMs)}
           </div>
 
           <p className="countdown-note">
-            Live countdown will be implemented in Task 2.
+            {isCompleted
+              ? "Flash Sale has ended!"
+              : isPaused
+                ? "Countdown is paused."
+                : "Countdown is running."}
           </p>
+
+          <div className="timer-controls">
+            <button
+              type="button"
+              onClick={pause}
+              disabled={!isRunning}
+              className="timer-button pause-button"
+            >
+              Pause
+            </button>
+
+            <button
+              type="button"
+              onClick={resume}
+              disabled={!isPaused}
+              className="timer-button resume-button"
+            >
+              Resume
+            </button>
+
+            <button
+              type="button"
+              onClick={restart}
+              className="timer-button restart-button"
+            >
+              Restart
+            </button>
+          </div>
         </div>
       </div>
     </header>

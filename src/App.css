@@ -58,14 +58,57 @@
   background: #0f172a;
   border: 2px solid #38bdf8;
   border-radius: 14px;
-  font-size: clamp(28px, 5vw, 46px);
+  font-size: clamp(25px, 5vw, 46px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #ffffff;
 }
 
 .countdown-note {
+  min-height: 20px;
   font-size: 13px !important;
+}
+
+.timer-controls {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.timer-button {
+  min-width: 110px;
+  padding: 12px 20px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.pause-button {
+  color: #111827;
+  background: #facc15;
+}
+
+.resume-button {
+  color: white;
+  background: #15803d;
+}
+
+.restart-button {
+  color: white;
+  background: #2563eb;
+}
+
+.timer-button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.timer-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .main-content {
@@ -265,10 +308,16 @@
   .product-image {
     min-height: 160px;
   }
+
+  .timer-button {
+    min-width: 90px;
+    padding: 11px 14px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .product-card {
+  .product-card,
+  .timer-button {
     transition: none;
   }
 }
